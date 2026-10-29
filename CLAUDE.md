@@ -2,14 +2,14 @@
 
 ## What this is
 The front door of the Mesh homelab: one UI over Google Calendar, n8n, an Obsidian vault (LiveSync),
-ntfy and the services on the Mesh nodes. It runs on core-01 (NanoPi R5C, Armbian, ARM64, 4 GB RAM)
+ntfy and the services on the Mesh nodes. It runs on core-01 (HP laptop, Debian 13, x86_64, 8 GB RAM; see docs/INVENTORY.md)
 at https://hub.mesh.net, reachable only over the tailnet. It replaces NP Monitor and Uptime Kuma.
 The hub never re-implements those apps. It reads, acts, listens and deep-links through adapters.
 The full plan is docs/PLAN.md.
 
 ## Non-negotiables
-- Every image is linux/arm64. Keep the hub-web + hub-worker under ~400 MB RAM together.
-- Every container in deploy/ sets mem_limit. Data volumes live under /opt/hub on the SSD.
+- Every image is linux/amd64. Keep the hub-web + hub-worker under ~400 MB RAM together.
+- Every container in deploy/ sets mem_limit. Data volumes live under /mesh/data/hub (NVMe root disk).
 - Migrations are additive only (no drop or rename in the release that stops using it),
   so rolling back to the previous image is always safe.
 - core-01 is shared: never stop, restart or edit containers or configs the hub doesn't own

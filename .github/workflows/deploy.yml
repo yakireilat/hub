@@ -1,0 +1,80 @@
+# Builds hub-web on every push to main and deploys it to core-01 (/mesh/data/hub) over the tailnet.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET  Tailscale OAuth client allowed to create tag:ci nodes
+#   DEPLOY_SSH_KEY                      private key whose .pub is in saytou's ~/.ssh/authorized_keys on core-01
+#   DEPLOY_KNOWN_HOSTS                  output of `ssh-keyscan 100.100.101.1`
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/hub-web:${{ github.sha }}
+  TARGET: saytou@100.100.101.1
+  DIR: /mesh/data/hub
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint && pnpm typecheck && pnpm test
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: image
+    runs-on: ubuntu-24.04
+    environment: core-01
+    steps:
+      - uses: actions/checkout@v4
+      - uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+      - name: SSH key
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519
+      - name: Copy compose and deploy script
+        run: scp deploy/compose.yml deploy/deploy.sh "$TARGET:$DIR/"
+      - name: Deploy
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | ssh "$TARGET" docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          rc=0
+          ssh "$TARGET" bash "$DIR/deploy.sh" "$IMAGE" || rc=$?
+          ssh "$TARGET" docker logout ghcr.io
+          exit $rc
