@@ -6,3 +6,4 @@
 - Phase 0: docs/INVENTORY.md of core-01; plan corrected to x86_64 and /mesh/data/hub.
 - Deploy workflow: amd64 image to GHCR, then compose up in /mesh/data/hub on core-01 over the tailnet, with backup, health check and rollback.
 - hub-web deployed by hand to /mesh/data/hub; hub.mesh.net nginx block behind Authelia (deploy/nginx).
+- ntfy on core-01 (ntfy.mesh.net, token auth, iOS via ntfy.sh upstream); deploy.sh pushes deploy results to the hub topic.
