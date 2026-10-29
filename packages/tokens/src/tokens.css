@@ -1,0 +1,43 @@
+/* Generated from src/index.ts by hand — keep both in sync (a unit test checks it). */
+:root,
+[data-theme="dark"] {
+  --hub-ground: #0D0E11;
+  --hub-rail: #0F1014;
+  --hub-surface: #16181D;
+  --hub-raised: #1D2027;
+  --hub-border: #2A2E37;
+  --hub-divider: #23262E;
+  --hub-text: #ECEDEF;
+  --hub-text-soft: #C9CCD2;
+  --hub-muted: #9AA0AB;
+  --hub-accent: #F0B44C;
+  --hub-accent-soft: #F7CB7A;
+  --hub-on-accent: #0D0E11;
+  --hub-up: #5BC58E;
+  --hub-slow: #F0B44C;
+  --hub-failed: #F2797A;
+  --hub-info: #7AA7F5;
+  --hub-idle: #9AA0AB;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --hub-ground: #F7F7F5;
+  --hub-rail: #EFEFEC;
+  --hub-surface: #FFFFFF;
+  --hub-raised: #F1F1EE;
+  --hub-border: #DCDCD6;
+  --hub-divider: #E6E6E1;
+  --hub-text: #16171A;
+  --hub-text-soft: #33363D;
+  --hub-muted: #5E636D;
+  --hub-accent: #9A6200;
+  --hub-accent-soft: #7A4D00;
+  --hub-on-accent: #FFFFFF;
+  --hub-up: #1E7A4C;
+  --hub-slow: #8F5A00;
+  --hub-failed: #B42828;
+  --hub-info: #2459B8;
+  --hub-idle: #5E636D;
+  color-scheme: light;
+}
