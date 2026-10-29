@@ -4,8 +4,8 @@ Source of truth: the "Hub — architecture & Claude Code build plan" doc. This f
 condensed brief Claude Code works from.
 
 ## What it is
-One thin web app, the front door of the Mesh. It runs on **core-01** (NanoPi R5C, ARM64, 4 GB RAM,
-SSD) at `https://hub.mesh.net`, reachable only over the tailnet, and replaces **NP Monitor** and
+One thin web app, the front door of the Mesh. It runs on **core-01** (HP laptop, x86_64, 8 GB RAM,
+NVMe) at `https://hub.mesh.net`, reachable only over the tailnet, and replaces **NP Monitor** and
 **Uptime Kuma**. Proven tools do the real work behind it: Google Calendar, n8n, an Obsidian vault
 (Self-hosted LiveSync), ntfy, and the services already running on the nodes. The hub owns layout,
 search, inbox, customization and an API for system users; it never re-implements those tools.
@@ -13,15 +13,15 @@ search, inbox, customization and an API for system users; it never re-implements
 ## Stack
 | Layer | Pick |
 | --- | --- |
-| Host | core-01, Docker Compose, every image `linux/arm64` |
+| Host | core-01, Docker Compose, every image `linux/amd64` |
 | Access | Tailscale (tailnet `mesh.nexora`) + existing nginx; split DNS `mesh.net` → Pi-hole |
 | HTTPS | Own internal CA wildcard `*.mesh.net`, fully trusted on every device |
 | Sign-in, people | Authelia v4.39+ (passkeys) as OIDC provider |
 | Sign-in, systems | Hub API tokens: scoped, expiring, hashed, audited |
 | App | Next.js + TypeScript + Tailwind + cmdk + react-grid-layout + TanStack Query |
-| Data | SQLite + Drizzle + FTS5, on the SSD under `/opt/hub` |
-| Images | Built on GitHub `ubuntu-24.04-arm` runners, pushed to GHCR |
-| Deploy | Actions joins tailnet as `tag:ci`, SSH to core-01, backup db, compose up, health check, rollback |
+| Data | SQLite + Drizzle + FTS5, on the NVMe under `/mesh/data/hub` |
+| Images | Built on GitHub `ubuntu-24.04` runners, pushed to GHCR |
+| Deploy | Actions joins tailnet as `tag:ci`, SSH to core-01 (`/mesh/data/hub`), backup db, compose up, health check, rollback |
 | Calendar | Google Calendar, polled every 2 min with sync tokens (OAuth app published to Production) |
 | Automations | n8n (existing) |
 | Notes | Obsidian + LiveSync → CouchDB on core-01; livesync-bridge mirrors to a plain folder |
