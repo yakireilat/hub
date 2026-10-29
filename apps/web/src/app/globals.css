@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@import "@hub/tokens/tokens.css";
+
+/* Tailwind utilities read the token variables, so light/dark is one attribute flip. */
+@theme inline {
+  --color-ground: var(--hub-ground);
+  --color-rail: var(--hub-rail);
+  --color-surface: var(--hub-surface);
+  --color-raised: var(--hub-raised);
+  --color-line: var(--hub-border);
+  --color-divider: var(--hub-divider);
+  --color-fg: var(--hub-text);
+  --color-fg-soft: var(--hub-text-soft);
+  --color-muted: var(--hub-muted);
+  --color-accent: var(--hub-accent);
+  --color-accent-soft: var(--hub-accent-soft);
+  --color-on-accent: var(--hub-on-accent);
+  --color-st-up: var(--hub-up);
+  --color-st-slow: var(--hub-slow);
+  --color-st-failed: var(--hub-failed);
+  --color-st-info: var(--hub-info);
+  --color-st-idle: var(--hub-idle);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html,
+body {
+  background: var(--hub-ground);
+  color: var(--hub-text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--hub-accent);
+  outline-offset: 2px;
+}
+
+@utility label-caps {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hub-muted);
+}
