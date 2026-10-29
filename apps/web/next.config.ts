@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 // HUB_STATIC=1 builds the public demo: a static export where the mock hub runs in the browser.
@@ -11,8 +12,9 @@ const config: NextConfig = {
         trailingSlash: true,
       }
     : {
-        // Standalone output keeps the arm64 image small (phase 2).
+        // Standalone output keeps the image small; tracing from the repo root puts the server at apps/web/server.js.
         output: "standalone",
+        outputFileTracingRoot: path.join(process.cwd(), "../.."),
       }),
   // Lint runs once at the repo root (pnpm lint), not again inside next build.
   eslint: { ignoreDuringBuilds: true },
