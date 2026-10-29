@@ -1,11 +1,11 @@
 "use client";
 
-import type { Command as HubCommand } from "@hub/core";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { CommandPalette } from "@/components/palette/CommandPalette";
 import { NAV, SPACES } from "@/lib/nav";
+import { useHub } from "./HubProvider";
 import { ThemeToggle } from "./ThemeToggle";
 
 const MOBILE_TABS = ["today", "calendar", "inbox", "automations"];
@@ -15,7 +15,9 @@ function typing(target: EventTarget | null) {
   return !!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
 }
 
-export function AppShell({ children, commands, needsCount }: { children: ReactNode; commands: HubCommand[]; needsCount: number }) {
+export function AppShell({ children }: { children: ReactNode }) {
+  const { commands, today } = useHub();
+  const needsCount = today?.needs.length ?? 0;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();

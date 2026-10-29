@@ -2,7 +2,7 @@ import type { Item } from "@hub/core";
 import { hhmm } from "@/lib/format";
 import { statusText } from "@/components/item/Item";
 
-/** Today's events with a now-line. Rendered on the server, so `now` is the request time. */
+/** Today's events with a now-line at `now`. */
 export function Agenda({ events, now }: { events: Item[]; now: Date }) {
   const nowIndex = events.findIndex((e) => new Date(e.time) > now);
   const rows = events.map((e, i) => ({ e, past: nowIndex === -1 || i < nowIndex }));

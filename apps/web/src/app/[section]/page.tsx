@@ -2,6 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { NAV } from "@/lib/nav";
 
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+  return NAV.filter((n) => n.phase).map((n) => ({ section: n.slug }));
+}
+
 export default async function SectionPage({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
   const entry = NAV.find((n) => n.slug === section && n.phase);

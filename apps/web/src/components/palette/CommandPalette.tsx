@@ -4,7 +4,7 @@ import { parseQuery, type Command as HubCommand, type Scope } from "@hub/core";
 import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { runAction } from "@/app/actions";
+import { useHub } from "@/components/shell/HubProvider";
 import { useToast } from "@/components/shell/Toast";
 import { NAV } from "@/lib/nav";
 
@@ -64,6 +64,7 @@ export function CommandPalette({
   const [, start] = useTransition();
   const router = useRouter();
   const toast = useToast();
+  const { act } = useHub();
   const { scope, text } = parseQuery(raw);
 
   const groups = useMemo(() => {
@@ -87,7 +88,7 @@ export function CommandPalette({
     close();
     if (cmd.action && !inSource) {
       const { itemId, actionId } = cmd.action;
-      start(async () => toast(await runAction(itemId ?? cmd.id, actionId)));
+      start(async () => toast(await act(itemId ?? cmd.id, actionId)));
     } else if (cmd.href?.startsWith("/")) {
       router.push(cmd.href);
     } else if (cmd.href) {

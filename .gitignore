@@ -12,3 +12,4 @@ data/
 *.db
 *.db-*
 .DS_Store
+.api-parked/
