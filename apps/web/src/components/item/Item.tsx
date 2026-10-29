@@ -1,3 +1,5 @@
+"use client";
+
 import { statusShape, statusWord, type Item as ItemModel, type Status } from "@hub/core";
 import { hhmm } from "@/lib/format";
 import { ItemActions } from "./ItemActions";

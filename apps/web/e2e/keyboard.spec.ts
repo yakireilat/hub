@@ -1,15 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+/** Today's heading renders only after the client has loaded hub data, i.e. once the page is hydrated. */
+async function open(page: Page, path = "/") {
+  await page.goto(path);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+}
 
 test.describe("Today", () => {
   test("opens with the verdict and needs-attention items", async ({ page }) => {
-    await page.goto("/");
+    await open(page);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(/need(s)? you/);
     await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
     await expect(page.getByTestId("now-line")).toBeVisible();
   });
 
   test("status pairs a shape with a word", async ({ page }) => {
-    await page.goto("/");
+    await open(page);
     await expect(page.getByText("▲ slow · 2.4 s")).toBeVisible();
   });
 });
@@ -18,7 +24,7 @@ test.describe("keyboard", () => {
   test.skip(({ isMobile }) => isMobile, "keyboard shortcuts are desktop-only");
 
   test("⌘K opens the palette, typing filters, Esc closes", async ({ page }) => {
-    await page.goto("/");
+    await open(page);
     await page.keyboard.press("ControlOrMeta+k");
     const dialog = page.getByRole("dialog", { name: "Command palette" });
     await expect(dialog).toBeVisible();
@@ -30,7 +36,7 @@ test.describe("keyboard", () => {
   });
 
   test("prefix > limits the palette to actions; Tab cycles scope", async ({ page }) => {
-    await page.goto("/");
+    await open(page);
     await page.keyboard.press("ControlOrMeta+k");
     const dialog = page.getByRole("dialog", { name: "Command palette" });
     await page.keyboard.type("> ");
@@ -41,7 +47,7 @@ test.describe("keyboard", () => {
   });
 
   test("palette navigation runs with Enter", async ({ page }) => {
-    await page.goto("/");
+    await open(page);
     await page.keyboard.press("ControlOrMeta+k");
     await page.keyboard.type("go to services");
     await page.keyboard.press("Enter");
@@ -49,7 +55,7 @@ test.describe("keyboard", () => {
   });
 
   test("g i jumps to Inbox, g t back to Today", async ({ page }) => {
-    await page.goto("/");
+    await open(page);
     await page.locator("body").press("g");
     await page.locator("body").press("i");
     await expect(page).toHaveURL(/\/inbox$/);
@@ -59,7 +65,7 @@ test.describe("keyboard", () => {
   });
 
   test("c focuses capture, Enter saves", async ({ page }) => {
-    await page.goto("/");
+    await open(page);
     await page.locator("body").press("c");
     await expect(page.locator("#capture")).toBeFocused();
     await page.keyboard.type("call the bank");
@@ -68,7 +74,7 @@ test.describe("keyboard", () => {
   });
 
   test("acting in place clears an item", async ({ page }) => {
-    await page.goto("/");
+    await open(page);
     const backup = page.locator('[data-item-id="n8n:backup"]');
     // Mock state lives as long as the server; a reused dev server may already have retried it.
     test.skip((await backup.count()) === 0, "backup was already retried on this server");
@@ -80,7 +86,7 @@ test.describe("keyboard", () => {
 
 test("phone shows the tab bar and hides the rail", async ({ page, isMobile }) => {
   test.skip(!isMobile, "phone only");
-  await page.goto("/");
+  await open(page);
   await expect(page.getByRole("navigation", { name: "Tabs" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden();
 });

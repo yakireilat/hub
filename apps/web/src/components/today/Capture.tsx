@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { capture } from "@/app/actions";
+import { useHub } from "@/components/shell/HubProvider";
 import { useToast } from "@/components/shell/Toast";
 
 export function Capture() {
@@ -10,6 +10,7 @@ export function Capture() {
   const [pending, start] = useTransition();
   const ref = useRef<HTMLInputElement>(null);
   const toast = useToast();
+  const { capture } = useHub();
   const params = useSearchParams();
 
   useEffect(() => {

@@ -2,12 +2,13 @@
 
 import type { ItemAction } from "@hub/core";
 import { useTransition } from "react";
-import { runAction } from "@/app/actions";
+import { useHub } from "@/components/shell/HubProvider";
 import { useToast } from "@/components/shell/Toast";
 
 export function ItemActions({ itemId, actions, href }: { itemId: string; actions: ItemAction[]; href: string }) {
   const [pending, start] = useTransition();
   const toast = useToast();
+  const { act } = useHub();
 
   return (
     <div className="mt-1.5 flex flex-wrap gap-2">
@@ -27,7 +28,7 @@ export function ItemActions({ itemId, actions, href }: { itemId: string; actions
             key={a.id}
             type="button"
             disabled={pending}
-            onClick={() => start(async () => toast(await runAction(itemId, a.id)))}
+            onClick={() => start(async () => toast(await act(itemId, a.id)))}
             className={
               a.primary
                 ? "min-h-11 rounded-lg bg-accent px-3.5 text-sm font-semibold text-on-accent disabled:opacity-60"

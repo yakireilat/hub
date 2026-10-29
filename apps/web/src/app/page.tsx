@@ -1,15 +1,46 @@
+"use client";
+
 import { statusShape, statusWord } from "@hub/core";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Item, statusText } from "@/components/item/Item";
+import { useHub } from "@/components/shell/HubProvider";
 import { Agenda } from "@/components/today/Agenda";
 import { Capture } from "@/components/today/Capture";
-import { getHub } from "@/lib/hub";
 import { hhmm, longDay } from "@/lib/format";
 
-export default async function TodayPage() {
-  const now = new Date();
-  const today = await getHub().today();
+function useNow() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const t = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+  return now;
+}
+
+export default function TodayPage() {
+  const { today, error } = useHub();
+  const now = useNow();
+
+  if (error && !today) {
+    return (
+      <p role="alert" className="rounded-xl border border-line bg-surface p-4">
+        <span className="text-st-failed">■ Can&apos;t reach the hub.</span> <span className="text-muted">{error}</span>
+      </p>
+    );
+  }
+  if (!today || !now) {
+    return (
+      <div aria-busy="true" aria-label="Loading Today" className="flex flex-col gap-6">
+        <div className="h-9 w-72 animate-pulse rounded-lg bg-surface" />
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="h-64 animate-pulse rounded-xl bg-surface" />
+          <div className="h-64 animate-pulse rounded-xl bg-surface" />
+        </div>
+      </div>
+    );
+  }
   const fyiRuns = today.runs.ok;
 
   return (
