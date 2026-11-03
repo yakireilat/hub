@@ -112,3 +112,19 @@ TLS: one **mkcert** wildcard `*.mesh.net` + `mesh.net`, valid until 2028-11-23. 
 11. **Images use `:latest` everywhere.** A rollback guarantee for the hub implies pinning at least its own images.
 12. The main compose file is under `/root/system`, which `saytou` can't read. The deploy user needs a decided home (data in `/mesh/data/hub`) and
     docker group access, which `saytou` already has.
+
+## Maintenance 2026-11-03
+What changed since the snapshot above (points 3, 4, 9 and 11 are resolved):
+- **CrowdSec removed.** It was tailing nginx's corrupt container log and bloating dockerd to ~6 GB. After a docker restart:
+  ~5.8 GiB available, swap near 0. `vm.swappiness=10` (`/etc/sysctl.d/99-mesh.conf`), journald capped at 300 MB.
+- **All images pinned** to exact versions, and **every container has `mem_limit`**. `diun` posts new image tags to ntfy (topic `hub`),
+  `mesh-updates.sh` (cron 09:15) posts pending apt updates and needed reboots; unattended-upgrades installs security fixes.
+  Uptime Kuma stays on 1.23.x (2.x needs a DB migration) and Gitea on 1.27.x (28.x is a separate upgrade).
+- **Netdata removed.** `node-exporter` (172.19.0.30) feeds Prometheus job `node-core01`; the `pulse/monitor.mesh.net` site is gone.
+- **IPs:** `services_mesh_net` now has `ip_range 172.19.0.128/25`, so dynamic addresses can't take the pinned `.2-.127` ones.
+  `mesh-ips` lists them and `mesh-ips next` gives the next free one. hub-web is `.50`, ntfy `.51`.
+- **n8n 5678 and luma-core 9000** are dropped on `wlo1`/`eno1` by `mesh-firewall.service`; tailnet and the docker network still reach them.
+- **Secrets** moved out of the compose files into `.env` (root only) and out of Authelia's config into `/mesh/configs/authelia/keys`
+  (JWT and session secrets rotated). Woodpecker sign-ups closed (`WOODPECKER_OPEN=false`).
+- **Backups:** `/mesh/backup.sh` (cron 03:30) pushes configs to `yakireilat/mesh-backups` branch `core-01` and an age-encrypted archive of
+  data + secrets to branch `core-01-data`. Restore steps are in `RESTORE.md` on the `core-01` branch.

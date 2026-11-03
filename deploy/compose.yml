@@ -15,7 +15,9 @@ services:
       HUB_DATA_DIR: /data
     volumes:
       - ./data:/data
-    networks: [mesh]
+    networks:
+      mesh:
+        ipv4_address: 172.19.0.50
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 10s
@@ -25,7 +27,7 @@ services:
 
   # Push notifications. iOS delivery goes through the upstream ntfy.sh server; messages stay here.
   ntfy:
-    image: binwiederhier/ntfy:v2.34.0
+    image: binwiederhier/ntfy:v2.37.1
     container_name: ntfy
     command: serve
     restart: unless-stopped
@@ -42,7 +44,9 @@ services:
       NTFY_ENABLE_LOGIN: "true"
     volumes:
       - ./ntfy:/var/lib/ntfy
-    networks: [mesh]
+    networks:
+      mesh:
+        ipv4_address: 172.19.0.51
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/v1/health | grep -q '\"healthy\":true'"]
       interval: 10s
@@ -52,6 +56,7 @@ services:
 
 networks:
   # Shared with nginx, so it can proxy hub.mesh.net to hub-web:3000.
+  # Fixed IPs: services there pin low addresses, and a dynamic one can take them on a docker restart.
   mesh:
     name: services_mesh_net
     external: true
