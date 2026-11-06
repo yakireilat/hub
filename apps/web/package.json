@@ -12,6 +12,7 @@
     "e2e": "playwright test"
   },
   "dependencies": {
+    "@hub/adapter-checks": "workspace:*",
     "@hub/adapter-mock": "workspace:*",
     "@hub/core": "workspace:*",
     "@hub/tokens": "workspace:*",

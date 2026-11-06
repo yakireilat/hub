@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { Adapter } from "./adapter";
 import { parseHubConfig } from "./config";
@@ -42,6 +43,13 @@ describe("parseQuery", () => {
 });
 
 describe("hub.yaml", () => {
+  it("core-01's deploy/hub.yaml is valid", () => {
+    const c = parseHubConfig(readFileSync(new URL("../../../deploy/hub.yaml", import.meta.url), "utf8"));
+    expect(c.services.length).toBeGreaterThan(0);
+    expect(new Set(c.services.map((s) => s.name)).size).toBe(c.services.length);
+    for (const s of c.services) expect(c.nodes.map((n) => n.id)).toContain(s.node);
+  });
+
   it("fills defaults", () => {
     const c = parseHubConfig("services:\n  - name: n8n\n    url: https://n8n.mesh.net\n");
     expect(c.services[0]).toMatchObject({ node: "core-01", slow_ms: 1500 });
