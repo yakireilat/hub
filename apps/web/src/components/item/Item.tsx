@@ -1,6 +1,7 @@
 "use client";
 
 import { statusShape, statusWord, type Item as ItemModel, type Status } from "@hub/core";
+import type { ReactNode } from "react";
 import { hhmm } from "@/lib/format";
 import { ItemActions } from "./ItemActions";
 
@@ -13,12 +14,21 @@ export const statusText: Record<Status, string> = {
 };
 
 /** Every visible record renders through this: shape + word status, title, one context line, time, ≤2 actions. */
-export function Item({ item, variant = "card" }: { item: ItemModel; variant?: "card" | "row" }) {
+export function Item({
+  item,
+  variant = "card",
+  aside,
+}: {
+  item: ItemModel;
+  variant?: "card" | "row";
+  /** Extra content on the right of a row, such as an uptime strip or edit buttons. */
+  aside?: ReactNode;
+}) {
   const word = item.statusLabel ?? statusWord[item.status];
   const shell =
     variant === "card"
       ? "flex gap-3 rounded-xl border border-line bg-surface p-3.5"
-      : "flex min-h-11 items-center gap-3 py-1.5";
+      : "flex min-h-11 flex-wrap items-center gap-3 py-1.5";
 
   return (
     <article className={shell} data-testid="item" data-item-id={item.id}>
@@ -40,6 +50,7 @@ export function Item({ item, variant = "card" }: { item: ItemModel; variant?: "c
         </p>
         {item.actions.length > 0 && <ItemActions itemId={item.id} actions={item.actions} href={item.href} />}
       </div>
+      {aside && <div className="flex flex-none items-center gap-2 max-sm:w-full max-sm:pl-11">{aside}</div>}
     </article>
   );
 }

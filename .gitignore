@@ -13,3 +13,4 @@ data/
 *.db-*
 .DS_Store
 .api-parked/
+apps/web/.e2e-data/

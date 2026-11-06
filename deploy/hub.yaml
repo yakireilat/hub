@@ -1,4 +1,5 @@
 # hub.yaml for core-01. Lives at /mesh/data/hub/data/hub.yaml; restart hub-web after editing.
+# Services can also be added, edited and removed on the Services screen; those changes live in hub.db.
 # url = where a click goes, health = what the hub checks (internal, so Authelia is not in the way).
 
 nodes:
