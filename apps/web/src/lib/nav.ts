@@ -14,7 +14,7 @@ export const NAV: NavEntry[] = [
   { slug: "inbox", href: "/inbox", label: "Inbox", key: "i", phase: 4 },
   { slug: "automations", href: "/automations", label: "Automations", key: "a", phase: 4 },
   { slug: "notes", href: "/notes", label: "Notes", key: "n", phase: 6 },
-  { slug: "services", href: "/services", label: "Services", key: "s", phase: 3 },
+  { slug: "services", href: "/services", label: "Services", key: "s" },
   { slug: "docs", href: "/docs", label: "Docs", key: "d", phase: 6 },
 ];
 
