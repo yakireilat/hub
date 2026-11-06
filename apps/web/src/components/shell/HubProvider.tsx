@@ -2,12 +2,16 @@
 
 import type { ActResult, Command, TodayView } from "@hub/core";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { createHubClient } from "@/lib/client";
+import { createHubClient, type HubClient } from "@/lib/client";
 
 interface HubState {
   today: TodayView | null;
   commands: Command[];
   error: string | null;
+  /** For screens with their own data, such as Services. */
+  client: HubClient;
+  /** Reloads Today and the palette, e.g. after a service was added. */
+  refresh(): Promise<void>;
   act(itemId: string, actionId: string): Promise<ActResult>;
   capture(text: string): Promise<ActResult>;
 }
@@ -48,6 +52,8 @@ export function HubProvider({ children }: { children: ReactNode }) {
       today,
       commands,
       error,
+      client,
+      refresh,
       async act(itemId, actionId) {
         const result = await client.act(itemId, actionId);
         await refresh();

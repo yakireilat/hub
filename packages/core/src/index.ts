@@ -4,5 +4,6 @@ export * from "./hub";
 export * from "./item";
 export * from "./query";
 export * from "./rules";
+export * from "./services";
 export * from "./status";
 export * from "./today";

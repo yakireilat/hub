@@ -24,13 +24,17 @@ const GROUPS: { scope: Scope; label: string; icon: string; tone: string }[] = [
   { scope: "nav", label: "Go to", icon: "→", tone: "text-muted" },
 ];
 
-const navCommands: HubCommand[] = NAV.map((n) => ({
-  id: `nav:${n.slug}`,
-  label: `Go to ${n.label}`,
-  keywords: [`g ${n.key}`],
-  scope: "nav",
-  href: n.href,
-}));
+const navCommands: HubCommand[] = [
+  ...NAV.map((n) => ({
+    id: `nav:${n.slug}`,
+    label: `Go to ${n.label}`,
+    keywords: [`g ${n.key}`],
+    scope: "nav" as const,
+    href: n.href,
+  })),
+  { id: "services:add", label: "Add a service", keywords: ["monitor", "new", "uptime"], scope: "service", href: "/services?add=1" },
+  { id: "services:edit", label: "Edit services", keywords: ["remove", "delete", "monitor"], scope: "service", href: "/services?edit=1" },
+];
 
 function matches(cmd: HubCommand, text: string) {
   if (!text) return true;

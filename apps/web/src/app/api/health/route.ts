@@ -2,8 +2,11 @@ import { getHub } from "@/lib/hub";
 
 export const dynamic = "force-dynamic";
 
-/** Deploy health check (phase 2) — 200 when the app can assemble Today. */
+/**
+ * Liveness for Docker, deploy.sh and Playwright: 200 once the hub, its config and its database are up.
+ * It never runs service checks, so it stays fast and can itself be monitored as a service.
+ */
 export async function GET() {
-  const today = await getHub().today();
-  return Response.json({ ok: true, needs: today.needs.length });
+  getHub();
+  return Response.json({ ok: true });
 }
