@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeServices, serviceInputSchema, summarizeUptime, uniqueServiceId, type StoredService } from "./services";
+import { mergeServices, serviceInputSchema, statusSince, summarizeUptime, uniqueServiceId, type StoredService } from "./services";
 
 const yaml = [
   { name: "n8n", url: "https://n8n.mesh.net", node: "core-01", slow_ms: 1500 },
@@ -74,5 +74,17 @@ describe("summarizeUptime", () => {
   });
   it("reports no data as null", () => {
     expect(summarizeUptime([], now)).toMatchObject({ uptime24h: null, uptime7d: null, failures24h: 0 });
+  });
+});
+
+describe("statusSince", () => {
+  const s = (at: number, status: "up" | "slow" | "failed") => ({ at, status, ms: 10 });
+  it("finds the start of the current run of the latest status", () => {
+    expect(statusSince([s(1, "up"), s(2, "failed"), s(3, "up"), s(4, "up")], "up")).toEqual({ since: 3, whole: false });
+    expect(statusSince([s(1, "failed"), s(2, "failed")], "failed")).toEqual({ since: 1, whole: true });
+  });
+  it("is null without history or when the latest sample disagrees", () => {
+    expect(statusSince([], "up")).toBeNull();
+    expect(statusSince([s(1, "up")], "failed")).toBeNull();
   });
 });

@@ -18,11 +18,14 @@ export function Item({
   item,
   variant = "card",
   aside,
+  timeLabel,
 }: {
   item: ItemModel;
   variant?: "card" | "row";
   /** Extra content on the right of a row, such as an uptime strip or edit buttons. */
   aside?: ReactNode;
+  /** Replaces the clock time, e.g. "up 3 d" on Services; the machine-readable time stays. */
+  timeLabel?: string;
 }) {
   const word = item.statusLabel ?? statusWord[item.status];
   const shell =
@@ -42,7 +45,7 @@ export function Item({
         <div className="flex justify-between gap-2">
           <h3 className="font-medium">{item.title}</h3>
           <time dateTime={item.time} className="font-mono text-xs text-muted">
-            {hhmm(item.time)}
+            {timeLabel ?? hhmm(item.time)}
           </time>
         </div>
         <p className="text-[13px] text-muted">

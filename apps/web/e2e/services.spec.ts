@@ -29,6 +29,9 @@ test("Smart add checks a new service, keeps its history, and remove has undo", a
   const row = page.getByRole("link", { name: /^Hub itself: Up, core-01 .*100% up in 24 hours/ });
   await expect(row).toBeVisible();
   await expect(row.getByRole("img", { name: /Last 24 hours: 100% up, 0 failed checks/ })).toBeVisible();
+  // The row says how long it has been up; the shared check time is shown once in the header.
+  await expect(row).toContainText(/up (<1|\d+) min/);
+  await expect(page.getByText(/Checked \d\d:\d\d/)).toBeVisible();
   await expect(page.getByText("Jellyfin")).toHaveCount(0);
 
   await page.getByRole("button", { name: "Edit services" }).click();

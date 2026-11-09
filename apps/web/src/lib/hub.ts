@@ -103,6 +103,8 @@ export async function servicesPayload(): Promise<ServicesPayload> {
     detail: i.context.split(" · ").slice(1).join(" · "),
     ms: Number(i.meta?.ms ?? 0),
     checkedAt: Date.parse(i.time),
+    since: null,
+    sinceAtLeast: false,
     history: { buckets: [], uptime24h: null, uptime7d: null, failures24h: 0 },
   }));
   return { services, nodes: nodes(s), sample: true };
