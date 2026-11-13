@@ -2,8 +2,11 @@
 #
 # Secrets (Settings → Secrets and variables → Actions):
 #   TS_OAUTH_CLIENT_ID, TS_OAUTH_SECRET  Tailscale OAuth client allowed to create tag:ci nodes
-#   DEPLOY_SSH_KEY                      private key whose .pub is in saytou's ~/.ssh/authorized_keys on core-01
-#   DEPLOY_KNOWN_HOSTS                  output of `ssh-keyscan 100.100.101.1`
+#   DEPLOY_SSH_KEY      optional: private key whose .pub is in saytou's ~/.ssh/authorized_keys on core-01.
+#                       Without it, the runner uses Tailscale SSH: core-01 tagged tag:hub, and the tailnet
+#                       policy's "ssh" section accepts tag:ci → tag:hub as saytou.
+#   DEPLOY_KNOWN_HOSTS  optional: output of `ssh-keyscan 100.100.101.1`. Without it, the host key is read
+#                       over the tailnet at deploy time (the WireGuard tunnel already proves it is core-01).
 name: Deploy
 
 on:
@@ -63,12 +66,22 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci
-      - name: SSH key
+      - name: SSH setup
+        env:
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
           install -m 700 -d ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/id_ed25519
+          if [ -n "$KEY" ]; then
+            printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+          fi
+          if [ -n "$KNOWN" ]; then
+            printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -T 15 "${TARGET#*@}" > ~/.ssh/known_hosts
+          fi
+          ssh -o BatchMode=yes "$TARGET" true
       - name: Copy compose and deploy script
         run: scp deploy/compose.yml deploy/deploy.sh "$TARGET:$DIR/"
       - name: Deploy

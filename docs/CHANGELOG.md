@@ -9,3 +9,4 @@
 - ntfy on core-01 (ntfy.mesh.net, token auth, iOS via ntfy.sh upstream); deploy.sh pushes deploy results to the hub topic.
 - Phase 3a: checks adapter (HTTP checks of hub.yaml services, up/slow/failed), Services screen grouped by node, core-01 hub.yaml.
 - Services: edit mode to add (smart detection of the app, health check and node), edit and remove services, stored in hub.db over hub.yaml; checks every minute with a 24 h uptime strip and 24 h / 7 d uptime per service.
+- Deploy workflow: SSH key and known-hosts secrets are optional; without them the runner reaches core-01 through Tailscale SSH (tag:ci → tag:hub).
