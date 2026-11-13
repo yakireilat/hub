@@ -68,3 +68,20 @@ describe("monitor", () => {
     expect((await monitor.adapter.read()).map((i) => i.id)).toEqual(["checks:a", "checks:b"]);
   });
 });
+
+describe("tcp and ping checks", () => {
+  const svc = (url: string) => ({ url, slow_ms: 1500 });
+  it("hands non-HTTP targets to the probe and reports its reason", async () => {
+    let asked = "";
+    const ok = await check(svc("tcp://redis:6379"), undefined, async (u) => void (asked = u.href));
+    expect(ok.status).toBe("up");
+    expect(asked).toBe("tcp://redis:6379");
+    expect(await check(svc("ping://10.100.102.75"), undefined, async () => Promise.reject(new Error("No reply")))).toMatchObject({
+      status: "failed",
+      detail: "No reply",
+    });
+  });
+  it("fails clearly where no probe exists, e.g. in the browser demo", async () => {
+    expect(await check(svc("tcp://redis:6379"))).toMatchObject({ status: "failed", detail: "No tcp checks here" });
+  });
+});

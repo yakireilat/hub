@@ -14,3 +14,4 @@
 - Notifications: ntfy retired; deploy results (and later inbox alerts) go out as Gmail through an n8n webhook. The ntfy container is removed on deploy; its data folder stays for rollback.
 - Services: node tiles with online / last seen from the Tailscale API and CPU, RAM, disk and temperature from Prometheus node-exporter (nodes matched by hostname).
 - Node tiles: match exporters by IP address correctly, map core-01 to its node-exporter, drop odin, and show which exporters match no node.
+- Checks: tcp:// and ping:// services; added Redis, Unbound and FlareSolverr from Uptime Kuma, and retired Uptime Kuma (status.mesh.net now redirects to the hub).

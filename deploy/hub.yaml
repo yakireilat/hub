@@ -17,7 +17,6 @@ services:
   - { name: n8n, url: https://n8n.mesh.net, health: http://n8n:5678/healthz }
   - { name: Gitea, url: https://git.mesh.net, health: http://gitea:3000/api/healthz }
   - { name: Vaultwarden, url: https://vault.mesh.net, health: http://vaultwarden:80/alive }
-  - { name: Uptime Kuma, url: https://status.mesh.net, health: http://uptimekuma:3001/ }
   - { name: Pi-hole, url: https://dns.mesh.net, health: http://pihole:80/admin/ }
   - { name: Authelia, url: https://auth.mesh.net, health: http://authelia:9091/api/health }
   - { name: Grafana, url: https://metrics.mesh.net, health: http://grafana:3000/api/health }
@@ -26,6 +25,9 @@ services:
   - { name: code-server, url: https://code.mesh.net, health: http://code-server:8080/healthz }
   - { name: Woodpecker CI, url: https://ci.mesh.net, health: http://woodpecker-server:8000/healthz }
   - { name: Mesh dashboard, url: https://mesh.net, health: http://mesh-dashboard:3000/ }
+  # Not web apps: tcp:// checks that the port accepts a connection, ping:// sends one ICMP echo.
+  - { name: Redis, url: "tcp://redis:6379" }
+  - { name: Unbound, url: "tcp://unbound:53" }
   # niflheim
   - { name: Jellyfin, node: niflheim, url: https://media.mesh.net, health: http://100.100.101.100:8096/health }
   - { name: Jellyseerr, node: niflheim, url: https://request.mesh.net, health: http://100.100.101.100:5055/ }
@@ -35,6 +37,7 @@ services:
   - { name: qBittorrent, node: niflheim, url: https://torrent.mesh.net, health: http://100.100.101.100:8082/ }
   - { name: Bazarr, node: niflheim, url: https://bazarr.mesh.net, health: http://100.100.101.100:6767/ }
   - { name: Dozzle, node: niflheim, url: https://dozzle.mesh.net, health: http://100.100.101.100:8085/ }
+  - { name: FlareSolverr, node: niflheim, url: "http://100.100.101.100:8191", health: "http://100.100.101.100:8191/health" }
   # bifrost
   - { name: Luma, node: bifrost, url: https://luma.mesh.net, health: http://100.100.101.10:8000/ }
 

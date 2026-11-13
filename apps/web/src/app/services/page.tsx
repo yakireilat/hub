@@ -236,15 +236,20 @@ function Services() {
                   </div>
                 );
               }
+              const label = `${s.name}: ${statusWord[s.status]}, ${item.context}${sinceLabel(s) ? `, ${sinceLabel(s)}` : ""}${s.history.uptime24h !== null ? `, ${pct(s.history.uptime24h)} up in 24 hours` : ""}`;
+              const row = <Item item={item} variant="row" timeLabel={sinceLabel(s)} aside={<UptimeStrip history={s.history} />} />;
+              // tcp:// and ping:// services (Redis, a LAN host) have no page to open.
+              if (!/^https?:/i.test(s.url)) {
+                return (
+                  <div key={s.id} role="group" aria-label={label} className="rounded-lg">
+                    {row}
+                  </div>
+                );
+              }
               return (
                 // The <article> inside gives the link no accessible name, so it needs its own label.
-                <a
-                  key={s.id}
-                  href={s.url}
-                  aria-label={`${s.name}: ${statusWord[s.status]}, ${item.context}${sinceLabel(s) ? `, ${sinceLabel(s)}` : ""}${s.history.uptime24h !== null ? `, ${pct(s.history.uptime24h)} up in 24 hours` : ""}`}
-                  className="block rounded-lg text-fg hover:bg-raised"
-                >
-                  <Item item={item} variant="row" timeLabel={sinceLabel(s)} aside={<UptimeStrip history={s.history} />} />
+                <a key={s.id} href={s.url} aria-label={label} className="block rounded-lg text-fg hover:bg-raised">
+                  {row}
                 </a>
               );
             })}

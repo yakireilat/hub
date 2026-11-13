@@ -69,7 +69,7 @@ export function commonDomain(existing: Pick<ManagedService, "url">[]): string | 
 /** Turns "jellyfin", "media.mesh.net" or "http://10.0.0.5:8096" into a full address. */
 export function toUrl(input: string, existing: Pick<ManagedService, "url">[]): URL {
   const text = input.trim();
-  if (/^https?:\/\//i.test(text)) return new URL(text);
+  if (/^(https?|tcp|ping):\/\//i.test(text)) return new URL(text);
   if (/^[\w-]+$/.test(text)) {
     const domain = commonDomain(existing);
     if (domain) return new URL(`https://${text.toLowerCase()}.${domain}`);
@@ -132,6 +132,8 @@ export async function detectService(
   fetchFn: typeof fetch | null = fetch,
 ): Promise<ServiceSuggestion> {
   const url = toUrl(input, existing);
+  // tcp:// and ping:// aren't web pages: nothing to probe or recognise, the check itself will tell.
+  if (!/^https?:$/.test(url.protocol)) fetchFn = null;
   const notes: string[] = [];
   const firstLabel = url.hostname.split(".")[0] ?? url.hostname;
 

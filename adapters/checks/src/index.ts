@@ -26,13 +26,34 @@ const TIMEOUT_MS = 5_000;
 const MAX_AGE_MS = 30_000;
 const HISTORY_MS = 7 * 24 * 3_600_000;
 
-/** One HTTP check: any answer below 400 within slow_ms is up, slower is slow, everything else failed. */
-export async function check(svc: Checkable, fetchFn: typeof fetch = fetch): Promise<CheckResult> {
+/**
+ * Checks for non-HTTP targets (tcp://host:port, ping://host). Resolves when the target answers and
+ * rejects with a short reason otherwise. Supplied by the server, so this package stays browser-safe.
+ */
+export type Probe = (target: URL, timeoutMs: number) => Promise<void>;
+
+/**
+ * One check. HTTP: any answer below 400 within slow_ms is up, slower is slow, everything else failed.
+ * tcp:// and ping:// targets go to `probe`, with the same up / slow / failed rule.
+ */
+export async function check(svc: Checkable, fetchFn: typeof fetch = fetch, probe?: Probe): Promise<CheckResult> {
   const start = performance.now();
   const elapsed = () => Math.round(performance.now() - start);
+  const target = svc.health ?? svc.url;
+  if (!/^https?:/i.test(target)) {
+    const scheme = target.split(":")[0];
+    if (!probe) return { status: "failed", ms: 0, detail: `No ${scheme} checks here` };
+    try {
+      await probe(new URL(target), TIMEOUT_MS);
+      const ms = elapsed();
+      return { status: ms > svc.slow_ms ? "slow" : "up", ms, detail: `${ms.toLocaleString("en")} ms` };
+    } catch (e) {
+      return { status: "failed", ms: elapsed(), detail: e instanceof Error ? e.message : "Unreachable" };
+    }
+  }
   try {
     // Redirects count as an answer: a login redirect still proves the service is listening.
-    const res = await fetchFn(svc.health ?? svc.url, {
+    const res = await fetchFn(target, {
       redirect: "manual",
       cache: "no-store",
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -89,6 +110,7 @@ export function createMonitor(opts: {
   services: () => ManagedService[];
   store?: CheckStore;
   fetchFn?: typeof fetch;
+  probe?: Probe;
   now?: () => number;
 }): Monitor {
   const store = opts.store ?? memoryCheckStore();
@@ -100,7 +122,7 @@ export function createMonitor(opts: {
   async function runRound(only?: ManagedService[]) {
     const list = only ?? opts.services();
     const at = now();
-    const results = await Promise.all(list.map((s) => check(s, opts.fetchFn)));
+    const results = await Promise.all(list.map((s) => check(s, opts.fetchFn, opts.probe)));
     const samples = list.map((s, i) => ({ id: s.id, at, status: results[i]!.status, ms: results[i]!.ms }));
     store.record(samples);
     list.forEach((s, i) => latest.set(s.id, { ...results[i]!, at }));

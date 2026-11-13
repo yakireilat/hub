@@ -26,6 +26,7 @@ import {
   type ServiceView,
 } from "@hub/core";
 import { openDb, type HubDb } from "./db";
+import { probe } from "./probes";
 
 /** hub.yaml from HUB_CONFIG, else HUB_DATA_DIR/hub.yaml. No file means defaults; a bad file throws. */
 export function loadConfig(): HubConfig {
@@ -50,7 +51,7 @@ function state(): State {
   const config = loadConfig();
   const db = openDb();
   const services = (): ManagedService[] => mergeServices(config.services, db.services());
-  const monitor = createMonitor({ services, store: db });
+  const monitor = createMonitor({ services, store: db, probe });
   const mocks = createMockAdapters();
   const mockChecks = mocks.find((m) => m.id === "checks")!;
   // Real checks replace the sample ones as soon as there is one real service, from hub.yaml or the UI.
