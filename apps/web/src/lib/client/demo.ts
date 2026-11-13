@@ -85,6 +85,19 @@ export function createDemoClient(): HubClient {
     act: (itemId, actionId) => hub.act(itemId, actionId),
     capture: async (text) => captureResult(text),
     services: async () => ({ services: await monitor.views(), nodes, sample: false }),
+    async nodes() {
+      const now = Date.now();
+      const count = (id: string) => services.filter((s) => s.node === id).length;
+      return {
+        sample: false,
+        sources: { tailscale: "ok", prometheus: "ok" },
+        nodes: [
+          { id: "core-01", presence: { online: true, lastSeen: now, address: "100.64.0.1", os: "linux" }, metrics: { cpu: 34, memory: 71, memoryTotalBytes: 8.2e9, disk: 18, tempC: 52 }, services: count("core-01"), failing: 0 },
+          { id: "niflheim", presence: { online: true, lastSeen: now, address: "100.64.0.2", os: "windows" }, metrics: { cpu: 12, memory: 44, memoryTotalBytes: 32e9, disk: 83, tempC: null }, services: count("niflheim"), failing: 1 },
+          { id: "bifrost", presence: { online: false, lastSeen: now - 3 * 3_600_000, address: "100.64.0.3", os: "linux" }, metrics: null, services: 0, failing: 0 },
+        ],
+      };
+    },
     detectService: (input) => detectService(input, services, nodes, null),
     async addService(input) {
       const r = save(input);

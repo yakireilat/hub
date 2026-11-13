@@ -3,7 +3,12 @@ import { z } from "zod";
 
 const node = z.object({
   id: z.string(),
+  /** Unused since Netdata was removed; kept so older hub.yaml files still parse. */
   netdata: z.string().url().optional(),
+  /** The machine's name on the tailnet, when it differs from `id`. */
+  tailscale: z.string().optional(),
+  /** Prometheus `instance` label of its node-exporter, when its hostname differs from `id`. */
+  instance: z.string().optional(),
 });
 
 const space = z.object({
@@ -39,6 +44,8 @@ const inboxRule = z.object({
 
 export const hubConfigSchema = z.object({
   nodes: z.array(node).default([]),
+  /** Prometheus with node-exporter metrics, for the node tiles. */
+  prometheus: z.string().url().optional(),
   spaces: z.array(space).default([]),
   services: z.array(service).default([]),
   actions: z.array(action).default([]),

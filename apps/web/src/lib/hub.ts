@@ -3,9 +3,12 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createMonitor, detectService, type Monitor } from "@hub/adapter-checks";
 import { createMockAdapters } from "@hub/adapter-mock";
+import { nodeMetrics } from "@hub/adapter-prometheus";
+import { createTailscaleReader } from "@hub/adapter-tailscale";
 import {
   createHub,
   mergeServices,
+  pick,
   parseHubConfig,
   serviceInputSchema,
   serviceSlug,
@@ -15,6 +18,8 @@ import {
   type Hub,
   type HubConfig,
   type ManagedService,
+  type NodesPayload,
+  type NodeView,
   type ServiceInput,
   type ServiceSuggestion,
   type ServicesPayload,
@@ -168,4 +173,81 @@ export function restoreService(id: string): ActResult {
   if (!row?.deleted) return { ok: false, message: "Nothing to restore" };
   s.db.setDeleted(id, false);
   return { ok: true, message: `Restored ${row.name}` };
+}
+
+type Presence = Awaited<ReturnType<ReturnType<typeof createTailscaleReader>["presence"]>>;
+const NODES_MAX_AGE_MS = 30_000;
+const n = globalThis as unknown as { __hubNodes?: { at: number; value: Promise<NodesPayload> }; __hubTs?: ReturnType<typeof createTailscaleReader> };
+
+/** Tailscale is optional: on when TS_API_CLIENT_ID and TS_API_CLIENT_SECRET are set. */
+function tailscale() {
+  const clientId = process.env.TS_API_CLIENT_ID;
+  const clientSecret = process.env.TS_API_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return undefined;
+  n.__hubTs ??= createTailscaleReader({ clientId, clientSecret });
+  return n.__hubTs;
+}
+
+/** Node tiles: configured nodes with tailnet presence and node-exporter metrics, cached for 30 s. */
+export function nodesPayload(): Promise<NodesPayload> {
+  if (n.__hubNodes && Date.now() - n.__hubNodes.at < NODES_MAX_AGE_MS) return n.__hubNodes.value;
+  const value = buildNodes();
+  n.__hubNodes = { at: Date.now(), value };
+  // A failed build shouldn't be served for 30 s.
+  value.catch(() => (n.__hubNodes = undefined));
+  return value;
+}
+
+async function buildNodes(): Promise<NodesPayload> {
+  const s = state();
+  const ts = tailscale();
+  const prom = s.config.prometheus;
+  if (!s.monitor.services().length && !s.config.nodes.length && !ts && !prom) return sampleNodes();
+
+  const [presence, metrics, views] = await Promise.all([
+    ts ? ts.presence().catch((e: unknown) => e as Error) : undefined,
+    prom ? nodeMetrics(prom).catch((e: unknown) => e as Error) : undefined,
+    s.monitor.views(),
+  ]);
+  if (presence instanceof Error) console.error("tailscale:", presence.message);
+  if (metrics instanceof Error) console.error("prometheus:", metrics.message);
+  const cfg = new Map(s.config.nodes.map((c) => [c.id, c]));
+
+  const list: NodeView[] = nodes(s).map((id) => {
+    const c = cfg.get(id);
+    const mine = views.filter((v) => v.node === id);
+    return {
+      id,
+      presence: presence instanceof Map ? (pick(presence as Presence, id, c?.tailscale) ?? null) : null,
+      metrics: metrics instanceof Map ? (pick(metrics, id, c?.instance) ?? null) : null,
+      services: mine.length,
+      failing: mine.filter((v) => v.status === "failed").length,
+    };
+  });
+  const sourceState = (x: unknown) => (x === undefined ? "off" : x instanceof Error ? "error" : "ok") as "off" | "error" | "ok";
+  return { nodes: list, sources: { tailscale: sourceState(presence), prometheus: sourceState(metrics) }, sample: false };
+}
+
+function sampleNodes(): NodesPayload {
+  const now = Date.now();
+  return {
+    sample: true,
+    sources: { tailscale: "off", prometheus: "off" },
+    nodes: [
+      {
+        id: "core-01",
+        presence: { online: true, lastSeen: now, address: "100.100.101.1", os: "linux" },
+        metrics: { cpu: 34, memory: 71, memoryTotalBytes: 8.2e9, disk: 18, tempC: 52 },
+        services: 5,
+        failing: 0,
+      },
+      {
+        id: "niflheim",
+        presence: { online: false, lastSeen: now - 3 * 3_600_000, address: "100.100.101.100", os: "windows" },
+        metrics: null,
+        services: 0,
+        failing: 0,
+      },
+    ],
+  };
 }

@@ -42,6 +42,18 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
 
+  adapters/prometheus:
+    dependencies:
+      '@hub/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
+  adapters/tailscale:
+    dependencies:
+      '@hub/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
   apps/web:
     dependencies:
       '@hub/adapter-checks':
@@ -50,6 +62,12 @@ importers:
       '@hub/adapter-mock':
         specifier: workspace:*
         version: link:../../adapters/mock
+      '@hub/adapter-prometheus':
+        specifier: workspace:*
+        version: link:../../adapters/prometheus
+      '@hub/adapter-tailscale':
+        specifier: workspace:*
+        version: link:../../adapters/tailscale
       '@hub/core':
         specifier: workspace:*
         version: link:../../packages/core

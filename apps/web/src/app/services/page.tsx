@@ -1,10 +1,11 @@
 "use client";
 
-import { STATUSES, statusShape, statusWord, type Item as ItemModel, type ServicesPayload, type ServiceView } from "@hub/core";
+import { STATUSES, statusShape, statusWord, type Item as ItemModel, type NodesPayload, type ServicesPayload, type ServiceView } from "@hub/core";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { Item, statusText } from "@/components/item/Item";
 import { AddService } from "@/components/services/AddService";
+import { NodeTiles } from "@/components/services/NodeTiles";
 import { ServiceForm } from "@/components/services/ServiceForm";
 import { pct, UptimeStrip } from "@/components/services/UptimeStrip";
 import { useHub } from "@/components/shell/HubProvider";
@@ -38,10 +39,14 @@ function sinceLabel(s: ServiceView): string | undefined {
 function useServices() {
   const { client } = useHub();
   const [data, setData] = useState<ServicesPayload | null>(null);
+  const [nodes, setNodes] = useState<NodesPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const reload = useCallback(async () => {
     try {
-      setData(await client.services());
+      // Node tiles are extra: if they fail, the service list still shows.
+      const [services, n] = await Promise.all([client.services(), client.nodes().catch(() => null)]);
+      setData(services);
+      setNodes(n);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -52,7 +57,7 @@ function useServices() {
     const t = window.setInterval(() => void reload(), 60_000);
     return () => window.clearInterval(t);
   }, [reload]);
-  return { data, error, reload };
+  return { data, nodes, error, reload };
 }
 
 export default function ServicesPage() {
@@ -66,7 +71,7 @@ export default function ServicesPage() {
 function Services() {
   const { client, refresh } = useHub();
   const toast = useToast();
-  const { data, error, reload } = useServices();
+  const { data, nodes, error, reload } = useServices();
   const params = useSearchParams();
   const router = useRouter();
   const editing = params.has("edit") || params.has("add");
@@ -163,6 +168,8 @@ function Services() {
           </button>
         </div>
       )}
+
+      {nodes && !editing && <NodeTiles data={nodes} />}
 
       {(editing || data.sample) && <AddService nodes={data.nodes} onAdded={() => void reload()} />}
 
