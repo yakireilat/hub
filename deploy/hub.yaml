@@ -20,7 +20,6 @@ services:
   - { name: Syncthing, url: https://sync.mesh.net, health: http://syncthing:8384/rest/noauth/health }
   - { name: code-server, url: https://code.mesh.net, health: http://code-server:8080/healthz }
   - { name: Woodpecker CI, url: https://ci.mesh.net, health: http://woodpecker-server:8000/healthz }
-  - { name: ntfy, url: https://ntfy.mesh.net, health: http://ntfy:8080/v1/health }
   - { name: Mesh dashboard, url: https://mesh.net, health: http://mesh-dashboard:3000/ }
   # niflheim
   - { name: Jellyfin, node: niflheim, url: https://media.mesh.net, health: http://100.100.101.100:8096/health }

@@ -2,7 +2,7 @@
 
 ## What this is
 The front door of the Mesh homelab: one UI over Google Calendar, n8n, an Obsidian vault (LiveSync),
-ntfy and the services on the Mesh nodes. It runs on core-01 (HP laptop, Debian 13, x86_64, 8 GB RAM; see docs/INVENTORY.md)
+the services on the Mesh nodes; notifications go out as Gmail through n8n. It runs on core-01 (HP laptop, Debian 13, x86_64, 8 GB RAM; see docs/INVENTORY.md)
 at https://hub.mesh.net, reachable only over the tailnet. It replaces NP Monitor and Uptime Kuma.
 The hub never re-implements those apps. It reads, acts, listens and deep-links through adapters.
 The full plan is docs/PLAN.md.
