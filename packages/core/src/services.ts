@@ -149,6 +149,17 @@ function worse(a: UptimeBucket["status"], b: CheckSample["status"]): CheckSample
   return a && RANK[a] >= RANK[b] ? a : b;
 }
 
+/**
+ * When the current status began: the oldest sample of the unbroken run of `status` that ends with
+ * the newest sample. `whole` is true when that run reaches the oldest sample kept, so it may be longer.
+ */
+export function statusSince(samples: CheckSample[], status: Status): { since: number; whole: boolean } | null {
+  let i = samples.length - 1;
+  if (i < 0 || samples[i]!.status !== status) return null;
+  while (i > 0 && samples[i - 1]!.status === status) i--;
+  return { since: samples[i]!.at, whole: i === 0 };
+}
+
 /** A service as the Services screen shows it: definition, latest check and history. */
 export interface ServiceView extends ManagedService {
   status: Status;
@@ -156,6 +167,10 @@ export interface ServiceView extends ManagedService {
   ms: number | null;
   /** Epoch ms of the latest check; null before the first one. */
   checkedAt: number | null;
+  /** Epoch ms when the current status began, as far as history goes back; null without history. */
+  since: number | null;
+  /** True when the current status covers all stored history, so it started at least that long ago. */
+  sinceAtLeast: boolean;
   history: UptimeSummary;
 }
 

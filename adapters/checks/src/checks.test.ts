@@ -55,7 +55,7 @@ describe("monitor", () => {
     ok = false;
     await monitor.runRound();
     const [view] = await monitor.views();
-    expect(view).toMatchObject({ id: "gitea", status: "failed", detail: "Unreachable", checkedAt: t });
+    expect(view).toMatchObject({ id: "gitea", status: "failed", detail: "Unreachable", checkedAt: t, since: t, sinceAtLeast: false });
     expect(view!.history.uptime24h).toBe(0.5);
     expect(view!.history.buckets.at(-1)).toMatchObject({ status: "failed", checks: 2 });
   });

@@ -9,6 +9,7 @@ import { ServiceForm } from "@/components/services/ServiceForm";
 import { pct, UptimeStrip } from "@/components/services/UptimeStrip";
 import { useHub } from "@/components/shell/HubProvider";
 import { useToast } from "@/components/shell/Toast";
+import { duration, hhmm } from "@/lib/format";
 
 function toItem(s: ServiceView, editing: boolean): ItemModel {
   const origin = editing ? (s.origin === "yaml" ? " · from hub.yaml" : " · added here") : "";
@@ -24,6 +25,14 @@ function toItem(s: ServiceView, editing: boolean): ItemModel {
     actions: [],
     href: s.url,
   };
+}
+
+const STATE_WORD: Record<string, string> = { up: "up", slow: "slow", failed: "down" };
+
+/** "up 3 d", "down 12 min", "up 7 d+": how long the service has been in its current state. */
+function sinceLabel(s: ServiceView): string | undefined {
+  if (s.since === null || !STATE_WORD[s.status]) return undefined;
+  return `${STATE_WORD[s.status]} ${duration(s.since)}${s.sinceAtLeast ? "+" : ""}`;
 }
 
 function useServices() {
@@ -83,6 +92,8 @@ function Services() {
   // Problems first inside each node, so the eye lands on what is wrong.
   const rank = (s: ServiceView) => ["failed", "slow"].indexOf(s.status) + 1 || 3;
   const withData = services.filter((s) => s.history.uptime24h !== null);
+  const checked = services.map((s) => s.checkedAt).filter((t): t is number => t !== null);
+  const lastCheck = checked.length && !data.sample ? Math.max(...checked) : null;
   const overall = withData.length ? withData.reduce((n, s) => n + s.history.uptime24h!, 0) / withData.length : null;
 
   async function remove(s: ServiceView) {
@@ -118,6 +129,11 @@ function Services() {
             ))
             .flatMap((el, i) => (i ? [" · ", el] : [el]))}
           {overall !== null && <> · {pct(overall)} up in 24 h</>}
+          {lastCheck !== null && (
+            <>
+              {" · "}Checked <time dateTime={new Date(lastCheck).toISOString()}>{hhmm(new Date(lastCheck))}</time>
+            </>
+          )}
         </p>
         {!data.sample && !editing && (
           <button
@@ -187,6 +203,7 @@ function Services() {
                     <Item
                       item={item}
                       variant="row"
+                      timeLabel={sinceLabel(s)}
                       aside={
                         <>
                           <UptimeStrip history={s.history} />
@@ -217,10 +234,10 @@ function Services() {
                 <a
                   key={s.id}
                   href={s.url}
-                  aria-label={`${s.name}: ${statusWord[s.status]}, ${item.context}${s.history.uptime24h !== null ? `, ${pct(s.history.uptime24h)} up in 24 hours` : ""}`}
+                  aria-label={`${s.name}: ${statusWord[s.status]}, ${item.context}${sinceLabel(s) ? `, ${sinceLabel(s)}` : ""}${s.history.uptime24h !== null ? `, ${pct(s.history.uptime24h)} up in 24 hours` : ""}`}
                   className="block rounded-lg text-fg hover:bg-raised"
                 >
-                  <Item item={item} variant="row" aside={<UptimeStrip history={s.history} />} />
+                  <Item item={item} variant="row" timeLabel={sinceLabel(s)} aside={<UptimeStrip history={s.history} />} />
                 </a>
               );
             })}

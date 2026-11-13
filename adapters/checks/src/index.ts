@@ -1,5 +1,6 @@
 import {
   serviceSlug,
+  statusSince,
   summarizeUptime,
   type Adapter,
   type CheckSample,
@@ -146,13 +147,18 @@ export function createMonitor(opts: {
       );
       return list.map((svc) => {
         const r = latest.get(svc.id);
+        const samples = hist.get(svc.id) ?? [];
+        const run = r ? statusSince(samples, r.status) : null;
         return {
           ...svc,
           status: r?.status ?? "idle",
           detail: r?.detail ?? "Not checked yet",
           ms: r?.ms ?? null,
           checkedAt: r?.at ?? null,
-          history: summarizeUptime(hist.get(svc.id) ?? [], t),
+          since: run?.since ?? null,
+          // Only "at least" once history is nearly full; a new service's whole history is its real age.
+          sinceAtLeast: !!run?.whole && t - run.since > HISTORY_MS - 86_400_000,
+          history: summarizeUptime(samples, t),
         };
       });
     },
