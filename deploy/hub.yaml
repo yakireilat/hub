@@ -3,10 +3,10 @@
 # url = where a click goes, health = what the hub checks (internal, so Authelia is not in the way).
 
 nodes:
-  - id: core-01
+  # node-exporter runs in Docker, so it reports the container's hostname; match it by scrape target.
+  - { id: core-01, instance: "172.19.0.30:9100" }
   - id: niflheim
   - id: bifrost
-  - id: odin
 
 # node-exporter metrics for the node tiles (CPU, RAM, disk, temperature). Nodes match by hostname;
 # set `instance:` on a node when its exporter's instance label doesn't contain the hostname.

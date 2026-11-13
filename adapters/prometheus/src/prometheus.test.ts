@@ -15,9 +15,10 @@ describe("nodeMetrics", () => {
       if (q.includes("node_filesystem")) return vec([[{ instance: "node-exporter:9100" }, 18]]);
       return vec([]); // no temperature sensors
     };
-    const m = await nodeMetrics("http://prometheus:9090", fetchFn);
+    const { byName: m, exporters } = await nodeMetrics("http://prometheus:9090", fetchFn);
     expect(m.get("core-01")).toEqual({ cpu: 34.2, memory: 71, memoryTotalBytes: 8e9, disk: 18, tempC: null });
     expect(m.get("node-exporter:9100")).toBe(m.get("core-01"));
+    expect(exporters).toEqual([{ instance: "node-exporter:9100", hostname: "core-01", metrics: m.get("core-01") }]);
   });
 
   it("fails loudly when Prometheus is down", async () => {
