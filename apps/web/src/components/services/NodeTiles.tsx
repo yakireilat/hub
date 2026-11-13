@@ -81,6 +81,10 @@ export function NodeTiles({ data }: { data: NodesPayload }) {
     data.sources.tailscale === "error" && "Tailscale didn't answer, so online state is missing.",
     data.sources.prometheus === "off" && !data.sample && "Metrics need a prometheus: address in hub.yaml.",
     data.sources.prometheus === "error" && "Prometheus didn't answer, so metrics are missing.",
+    ...data.unmatchedExporters.map(
+      (e) =>
+        `Prometheus has a node-exporter at ${e.instance}${e.hostname ? ` (hostname ${e.hostname})` : ""} that matches no node. Set instance: "${e.instance}" on its node in hub.yaml.`,
+    ),
   ].filter(Boolean) as string[];
 
   return (

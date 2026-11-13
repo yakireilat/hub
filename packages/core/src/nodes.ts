@@ -32,14 +32,20 @@ export interface NodesPayload {
   nodes: NodeView[];
   /** Which sources answered, so the screen can say what is missing. */
   sources: { tailscale: "ok" | "off" | "error"; prometheus: "ok" | "off" | "error" };
+  /** node-exporters Prometheus reports that no node matched, so the screen can say what to set. */
+  unmatchedExporters: { instance: string; hostname: string | null }[];
   sample: boolean;
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/\..*$/, "");
+/** Lower-cased; a host name loses its domain ("core-01.tail1234.ts.net" → "core-01"), an IP address doesn't. */
+const norm = (s: string) => {
+  const x = s.toLowerCase();
+  return /^\d+\.\d+\.\d+\.\d+(:\d+)?$/.test(x) ? x : x.replace(/\..*$/, "");
+};
 
 /** Looks a node up by its configured alias, else by its id, ignoring case and any domain suffix. */
 export function pick<T>(byName: Map<string, T>, id: string, alias?: string): T | undefined {
-  return (alias ? byName.get(norm(alias)) : undefined) ?? byName.get(norm(id));
+  return (alias ? (byName.get(alias.toLowerCase()) ?? byName.get(norm(alias))) : undefined) ?? byName.get(norm(id));
 }
 
 export const nodeKey = norm;

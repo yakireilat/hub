@@ -219,13 +219,23 @@ async function buildNodes(): Promise<NodesPayload> {
     return {
       id,
       presence: presence instanceof Map ? (pick(presence as Presence, id, c?.tailscale) ?? null) : null,
-      metrics: metrics instanceof Map ? (pick(metrics, id, c?.instance) ?? null) : null,
+      metrics: metrics && !(metrics instanceof Error) ? (pick(metrics.byName, id, c?.instance) ?? null) : null,
       services: mine.length,
       failing: mine.filter((v) => v.status === "failed").length,
     };
   });
   const sourceState = (x: unknown) => (x === undefined ? "off" : x instanceof Error ? "error" : "ok") as "off" | "error" | "ok";
-  return { nodes: list, sources: { tailscale: sourceState(presence), prometheus: sourceState(metrics) }, sample: false };
+  const used = new Set(list.map((x) => x.metrics));
+  const unmatchedExporters =
+    metrics && !(metrics instanceof Error)
+      ? metrics.exporters.filter((e) => !used.has(e.metrics)).map(({ instance, hostname }) => ({ instance, hostname }))
+      : [];
+  return {
+    nodes: list,
+    sources: { tailscale: sourceState(presence), prometheus: sourceState(metrics) },
+    unmatchedExporters,
+    sample: false,
+  };
 }
 
 function sampleNodes(): NodesPayload {
@@ -233,6 +243,7 @@ function sampleNodes(): NodesPayload {
   return {
     sample: true,
     sources: { tailscale: "off", prometheus: "off" },
+    unmatchedExporters: [],
     nodes: [
       {
         id: "core-01",

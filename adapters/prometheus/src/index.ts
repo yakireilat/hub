@@ -28,7 +28,16 @@ async function query(base: string, q: string, fetchFn: typeof fetch): Promise<Sa
  * Current metrics per machine. Keyed both by the node-exporter `instance` label and by the
  * machine's hostname (from node_uname_info), so nodes match by name without configuration.
  */
-export async function nodeMetrics(base: string, fetchFn: typeof fetch = fetch): Promise<Map<string, NodeMetrics>> {
+export interface Exporter {
+  instance: string;
+  hostname: string | null;
+  metrics: NodeMetrics;
+}
+
+export async function nodeMetrics(
+  base: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<{ byName: Map<string, NodeMetrics>; exporters: Exporter[] }> {
   const keys = Object.keys(QUERIES) as (keyof typeof QUERIES)[];
   const [uname, ...results] = await Promise.all([
     query(base, "node_uname_info", fetchFn),
@@ -50,9 +59,14 @@ export async function nodeMetrics(base: string, fetchFn: typeof fetch = fetch): 
     out.set(inst.toLowerCase(), m);
     out.set(nodeKey(inst.replace(/:\d+$/, "")), m);
   }
+  const hostnames = new Map<string, string>();
   for (const s of uname) {
     const m = s.metric.instance ? byInstance.get(s.metric.instance) : undefined;
-    if (m && s.metric.nodename) out.set(nodeKey(s.metric.nodename), m);
+    if (m && s.metric.nodename) {
+      out.set(nodeKey(s.metric.nodename), m);
+      hostnames.set(s.metric.instance!, s.metric.nodename);
+    }
   }
-  return out;
+  const exporters = [...byInstance].map(([instance, metrics]) => ({ instance, hostname: hostnames.get(instance) ?? null, metrics }));
+  return { byName: out, exporters };
 }
