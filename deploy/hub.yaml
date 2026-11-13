@@ -17,7 +17,6 @@ services:
   - { name: n8n, url: https://n8n.mesh.net, health: http://n8n:5678/healthz }
   - { name: Gitea, url: https://git.mesh.net, health: http://gitea:3000/api/healthz }
   - { name: Vaultwarden, url: https://vault.mesh.net, health: http://vaultwarden:80/alive }
-  - { name: Uptime Kuma, url: https://status.mesh.net, health: http://uptimekuma:3001/ }
   - { name: Pi-hole, url: https://dns.mesh.net, health: http://pihole:80/admin/ }
   - { name: Authelia, url: https://auth.mesh.net, health: http://authelia:9091/api/health }
   - { name: Grafana, url: https://metrics.mesh.net, health: http://grafana:3000/api/health }
