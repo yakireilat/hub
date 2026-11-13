@@ -7,7 +7,6 @@ nodes:
   - { id: core-01, instance: "172.19.0.30:9100" }
   - id: niflheim
   - id: bifrost
-  - id: eilatlab
 
 # node-exporter metrics for the node tiles (CPU, RAM, disk, temperature). Nodes match by hostname;
 # set `instance:` on a node when its exporter's instance label doesn't contain the hostname.
@@ -40,8 +39,6 @@ services:
   - { name: Bazarr, node: niflheim, url: https://bazarr.mesh.net, health: http://100.100.101.100:6767/ }
   - { name: Dozzle, node: niflheim, url: https://dozzle.mesh.net, health: http://100.100.101.100:8085/ }
   - { name: FlareSolverr, node: niflheim, url: "http://100.100.101.100:8191", health: "http://100.100.101.100:8191/health" }
-  # eilatlab (LAN only, not on the tailnet)
-  - { name: EilatLab, node: eilatlab, url: "ping://10.100.102.75" }
   # bifrost
   - { name: Luma, node: bifrost, url: https://luma.mesh.net, health: http://100.100.101.10:8000/ }
 
