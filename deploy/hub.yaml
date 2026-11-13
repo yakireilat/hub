@@ -7,6 +7,7 @@ nodes:
   - { id: core-01, instance: "172.19.0.30:9100" }
   - id: niflheim
   - id: bifrost
+  - id: eilatlab
 
 # node-exporter metrics for the node tiles (CPU, RAM, disk, temperature). Nodes match by hostname;
 # set `instance:` on a node when its exporter's instance label doesn't contain the hostname.
@@ -26,6 +27,9 @@ services:
   - { name: code-server, url: https://code.mesh.net, health: http://code-server:8080/healthz }
   - { name: Woodpecker CI, url: https://ci.mesh.net, health: http://woodpecker-server:8000/healthz }
   - { name: Mesh dashboard, url: https://mesh.net, health: http://mesh-dashboard:3000/ }
+  # Not web apps: tcp:// checks that the port accepts a connection, ping:// sends one ICMP echo.
+  - { name: Redis, url: "tcp://redis:6379" }
+  - { name: Unbound, url: "tcp://unbound:53" }
   # niflheim
   - { name: Jellyfin, node: niflheim, url: https://media.mesh.net, health: http://100.100.101.100:8096/health }
   - { name: Jellyseerr, node: niflheim, url: https://request.mesh.net, health: http://100.100.101.100:5055/ }
@@ -35,6 +39,9 @@ services:
   - { name: qBittorrent, node: niflheim, url: https://torrent.mesh.net, health: http://100.100.101.100:8082/ }
   - { name: Bazarr, node: niflheim, url: https://bazarr.mesh.net, health: http://100.100.101.100:6767/ }
   - { name: Dozzle, node: niflheim, url: https://dozzle.mesh.net, health: http://100.100.101.100:8085/ }
+  - { name: FlareSolverr, node: niflheim, url: "http://100.100.101.100:8191", health: "http://100.100.101.100:8191/health" }
+  # eilatlab (LAN only, not on the tailnet)
+  - { name: EilatLab, node: eilatlab, url: "ping://10.100.102.75" }
   # bifrost
   - { name: Luma, node: bifrost, url: https://luma.mesh.net, health: http://100.100.101.10:8000/ }
 
