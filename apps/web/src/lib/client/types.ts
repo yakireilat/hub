@@ -1,4 +1,4 @@
-import type { ActResult, Command, ServiceInput, ServiceSuggestion, ServicesPayload, ServiceView, TodayView } from "@hub/core";
+import type { ActResult, Command, NodesPayload, ServiceInput, ServiceSuggestion, ServicesPayload, ServiceView, TodayView } from "@hub/core";
 
 export type SaveResult = ActResult & { service?: ServiceView; errors?: Record<string, string> };
 
@@ -9,6 +9,8 @@ export interface HubClient {
   act(itemId: string, actionId: string): Promise<ActResult>;
   capture(text: string): Promise<ActResult>;
   services(): Promise<ServicesPayload>;
+  /** Node tiles: tailnet presence and node-exporter metrics per machine. */
+  nodes(): Promise<NodesPayload>;
   /** Smart add: a suggestion for a typed name or address. Throws with a readable message on bad input. */
   detectService(input: string): Promise<ServiceSuggestion>;
   addService(input: ServiceInput): Promise<SaveResult>;

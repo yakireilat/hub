@@ -12,3 +12,4 @@
 - Deploy workflow: SSH key and known-hosts secrets are optional; without them the runner reaches core-01 through Tailscale SSH (tag:ci → tag:hub).
 - Services: each row shows how long a service has been up, slow or down ("up 3 d") instead of the shared check time, which now appears once in the header.
 - Notifications: ntfy retired; deploy results (and later inbox alerts) go out as Gmail through an n8n webhook. The ntfy container is removed on deploy; its data folder stays for rollback.
+- Services: node tiles with online / last seen from the Tailscale API and CPU, RAM, disk and temperature from Prometheus node-exporter (nodes matched by hostname).

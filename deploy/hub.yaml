@@ -6,6 +6,11 @@ nodes:
   - id: core-01
   - id: niflheim
   - id: bifrost
+  - id: odin
+
+# node-exporter metrics for the node tiles (CPU, RAM, disk, temperature). Nodes match by hostname;
+# set `instance:` on a node when its exporter's instance label doesn't contain the hostname.
+prometheus: http://prometheus:9090
 
 services:
   # core-01

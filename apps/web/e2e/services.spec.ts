@@ -60,3 +60,14 @@ test("The palette opens Add a service", async ({ page, isMobile }) => {
   await expect(page).toHaveURL(/\/services\?add=1$/);
   await expect(page.getByLabel("Add a service")).toBeVisible();
 });
+
+test("Node tiles show online state and metrics with words, not colour alone", async ({ page }) => {
+  await page.goto("/services");
+  const nodes = page.getByRole("region", { name: "Nodes" });
+  await expect(nodes.getByTestId("node")).toHaveCount(2);
+  const core = nodes.getByRole("article", { name: /^core-01\. Online\./ });
+  await expect(core).toContainText("● Online");
+  await expect(core).toContainText("CPU");
+  await expect(core).toContainText("34%");
+  await expect(nodes.getByRole("article", { name: /^niflheim\. Offline · seen 3 h ago/ })).toContainText("No metrics");
+});
