@@ -7,7 +7,7 @@ condensed brief Claude Code works from.
 One thin web app, the front door of the Mesh. It runs on **core-01** (HP laptop, x86_64, 8 GB RAM,
 NVMe) at `https://hub.mesh.net`, reachable only over the tailnet, and replaces **NP Monitor** and
 **Uptime Kuma**. Proven tools do the real work behind it: Google Calendar, n8n, an Obsidian vault
-(Self-hosted LiveSync), ntfy, and the services already running on the nodes. The hub owns layout,
+(Self-hosted LiveSync), Gmail through n8n for notifications, and the services already running on the nodes. The hub owns layout,
 search, inbox, customization and an API for system users; it never re-implements those tools.
 
 ## Stack
@@ -25,10 +25,10 @@ search, inbox, customization and an API for system users; it never re-implements
 | Calendar | Google Calendar, polled every 2 min with sync tokens (OAuth app published to Production) |
 | Automations | n8n (existing) |
 | Notes | Obsidian + LiveSync → CouchDB on core-01; livesync-bridge mirrors to a plain folder |
-| Notifications | ntfy, iOS push via upstream `https://ntfy.sh` |
+| Notifications | Email: the hub POSTs to an n8n webhook, n8n sends it with its Gmail credential (ntfy retired) |
 | Health | Built-in checks + Netdata + Tailscale API (OAuth client) |
 
-New containers on core-01: `hub-web`, `hub-worker`, `ntfy`, `couchdb`, `livesync-bridge`, each with
+New containers on core-01: `hub-web`, `hub-worker`, `couchdb`, `livesync-bridge`, each with
 `mem_limit`. Heavy services (Immich, Paperless-ngx, Home Assistant, Ollama) live on eilatlab or Niflheim.
 
 ## Adapter contract
@@ -59,9 +59,9 @@ Design tokens: ground `#0D0E11`, accent amber `#F0B44C`, Geist + Geist Mono.
 | --- | --- | --- |
 | 0 | Inventory (read-only) | `docs/INVENTORY.md` of core-01 |
 | 1 | Shell and design system | Rail, top bar, ⌘K palette, Today with mock data, tokens, light/dark |
-| 2 | First deploy | hub.mesh.net behind Authelia, ntfy push, deploy on merge |
+| 2 | First deploy | hub.mesh.net behind Authelia, deploy on merge, email on deploy |
 | 3 | Services, uptime, nodes | Checks, history, Netdata tiles, Tailscale state, migrated monitors |
-| 4 | Automations + Inbox | n8n runs, Retry/Run, action buttons, inbox fed by ntfy |
+| 4 | Automations + Inbox | n8n runs, Retry/Run, action buttons, inbox fed by n8n |
 | 5 | Calendar | Live agenda, create events, answer invites |
 | 6 | Notes and search | CouchDB + bridge, recent notes, capture, one search |
 | 7 | API and system users | Tokens, scopes, audit, REST + SSE + webhooks + MCP |
