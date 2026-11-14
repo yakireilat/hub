@@ -1,4 +1,5 @@
 export * from "./adapter";
+export * from "./automations";
 export * from "./config";
 export * from "./hub";
 export * from "./item";

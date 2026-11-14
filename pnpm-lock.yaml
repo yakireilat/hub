@@ -42,6 +42,12 @@ importers:
         specifier: workspace:*
         version: link:../../packages/core
 
+  adapters/n8n:
+    dependencies:
+      '@hub/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+
   adapters/prometheus:
     dependencies:
       '@hub/core':
@@ -62,6 +68,9 @@ importers:
       '@hub/adapter-mock':
         specifier: workspace:*
         version: link:../../adapters/mock
+      '@hub/adapter-n8n':
+        specifier: workspace:*
+        version: link:../../adapters/n8n
       '@hub/adapter-prometheus':
         specifier: workspace:*
         version: link:../../adapters/prometheus

@@ -44,6 +44,13 @@ const inboxRule = z.object({
 
 export const hubConfigSchema = z.object({
   nodes: z.array(node).default([]),
+  /** n8n: `url` is how the hub reaches its API (key in N8N_API_KEY); `public_url` is where links go. */
+  n8n: z
+    .object({
+      url: z.string().url().default("http://n8n:5678"),
+      public_url: z.string().url().default("https://n8n.mesh.net"),
+    })
+    .prefault({}),
   /** Prometheus with node-exporter metrics, for the node tiles. */
   prometheus: z.string().url().optional(),
   spaces: z.array(space).default([]),

@@ -27,6 +27,8 @@ export const httpClient: HubClient = {
   capture: (text) => json<ActResult>("/capture", post({ text })),
   services: () => json("/services"),
   nodes: () => json("/nodes"),
+  automations: () => json("/automations"),
+  setWorkflowActive: (id, active) => json<ActResult>(`/automations/${enc(id)}/active`, post({ active })),
   async detectService(input) {
     const r = await json<ServiceSuggestion | ActResult>("/services/detect", post({ input }));
     if ("ok" in r && !r.ok) throw new Error(r.message);

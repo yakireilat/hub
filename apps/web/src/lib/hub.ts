@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createMonitor, detectService, type Monitor } from "@hub/adapter-checks";
 import { createMockAdapters } from "@hub/adapter-mock";
+import { createN8nAdapter, createN8nClient } from "@hub/adapter-n8n";
 import { nodeMetrics } from "@hub/adapter-prometheus";
 import { createTailscaleReader } from "@hub/adapter-tailscale";
 import {
@@ -15,6 +16,7 @@ import {
   serviceSlug,
   uniqueServiceId,
   type ActResult,
+  type AutomationsPayload,
   type Adapter,
   type Hub,
   type HubConfig,
@@ -41,6 +43,8 @@ interface State {
   db: HubDb;
   monitor: Monitor;
   mockChecks: Adapter;
+  /** The real n8n adapter, when N8N_API_KEY is set. */
+  n8n?: ReturnType<typeof createN8nAdapter>;
   timer?: ReturnType<typeof setInterval>;
 }
 
@@ -60,8 +64,14 @@ function state(): State {
     ...monitor.adapter,
     read: () => (services().length ? monitor.adapter.read() : mockChecks.read()),
   };
-  const hub = createHub([...mocks.filter((m) => m.id !== "checks"), checks], config.inbox_rules);
-  g.__hubState = { hub, config, db, monitor, mockChecks };
+  // n8n is real once N8N_API_KEY is set; until then Today keeps the sample runs.
+  const apiKey = process.env.N8N_API_KEY;
+  const n8n = apiKey
+    ? createN8nAdapter({ client: createN8nClient({ url: config.n8n.url, apiKey }), publicUrl: config.n8n.public_url })
+    : undefined;
+  const replaced = new Set(["checks", ...(n8n ? ["n8n"] : [])]);
+  const hub = createHub([...mocks.filter((m) => !replaced.has(m.id)), checks, ...(n8n ? [n8n] : [])], config.inbox_rules);
+  g.__hubState = { hub, config, db, monitor, mockChecks, n8n };
   return g.__hubState;
 }
 
@@ -274,4 +284,40 @@ export async function publicStatusPayload() {
   const s = state();
   // monitor.views() is the live list: hub.yaml plus services added here, minus ones removed here.
   return publicStatus(await s.monitor.views());
+}
+
+/** The Automations screen: n8n workflows with today's runs, or sample ones until n8n is connected. */
+export async function automationsPayload(): Promise<AutomationsPayload> {
+  const { n8n } = state();
+  if (!n8n) return sampleAutomations();
+  try {
+    return await n8n.automations();
+  } catch (e) {
+    return { workflows: [], sample: false, error: e instanceof Error ? e.message : "n8n didn't answer" };
+  }
+}
+
+export async function setWorkflowActive(id: string, active: boolean): Promise<ActResult> {
+  const { n8n } = state();
+  if (!n8n) return { ok: false, message: "n8n isn't connected: set N8N_API_KEY" };
+  return n8n.setActive(id, active);
+}
+
+function sampleAutomations(): AutomationsPayload {
+  const now = Date.now();
+  const run = (id: string, status: "success" | "error", minsAgo: number, ms: number) => ({
+    id,
+    status,
+    startedAt: now - minsAgo * 60_000,
+    durationMs: ms,
+    href: "https://n8n.mesh.net/home/executions",
+  });
+  return {
+    sample: true,
+    workflows: [
+      { id: "1", name: "Nightly backup → B2", active: true, runsToday: 1, failedToday: 1, href: "https://n8n.mesh.net", recent: [run("88", "error", 450, 300_000)] },
+      { id: "2", name: "Hub notify", active: true, runsToday: 6, failedToday: 0, href: "https://n8n.mesh.net", recent: [run("87", "success", 20, 900), run("86", "success", 140, 850)] },
+      { id: "3", name: "Pi-hole daily report", active: false, runsToday: 0, failedToday: 0, href: "https://n8n.mesh.net", recent: [] },
+    ],
+  };
 }

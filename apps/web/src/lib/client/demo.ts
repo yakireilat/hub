@@ -7,6 +7,7 @@ import {
   type CheckSample,
   type ManagedService,
   type ServiceInput,
+  type WorkflowView,
 } from "@hub/core";
 import { captureResult } from "@/lib/capture";
 import type { HubClient, SaveResult } from "./types";
@@ -63,6 +64,18 @@ export function createDemoClient(): HubClient {
   const mocks = createMockAdapters().filter((m) => m.id !== "checks");
   const hub = createHub([...mocks, monitor.adapter]);
   const nodes = ["core-01", "niflheim"];
+  const run = (id: string, status: "success" | "error", minsAgo: number, ms: number) => ({
+    id,
+    status,
+    startedAt: Date.now() - minsAgo * 60_000,
+    durationMs: ms,
+    href: "https://n8n.example.net",
+  });
+  const demoWorkflows: WorkflowView[] = [
+    { id: "1", name: "Nightly backup → B2", active: true, runsToday: 1, failedToday: 1, href: "https://n8n.example.net", recent: [run("88", "error", 450, 300_000)] },
+    { id: "2", name: "Hub notify", active: true, runsToday: 6, failedToday: 0, href: "https://n8n.example.net", recent: [run("87", "success", 20, 900), run("86", "success", 140, 850)] },
+    { id: "3", name: "Pi-hole daily report", active: false, runsToday: 0, failedToday: 0, href: "https://n8n.example.net", recent: [] },
+  ];
 
   function save(input: ServiceInput, id?: string): SaveResult {
     const p = serviceInputSchema.safeParse(input);
@@ -90,6 +103,15 @@ export function createDemoClient(): HubClient {
       removed: [...removed.values()].map(({ id, name, url, node }) => ({ id, name, url, node })),
       sample: false,
     }),
+    async automations() {
+      return { sample: false, workflows: demoWorkflows.map((w) => ({ ...w, recent: [...w.recent] })) };
+    },
+    async setWorkflowActive(id, active) {
+      const w = demoWorkflows.find((x) => x.id === id);
+      if (!w) return { ok: false, message: "No such workflow" };
+      w.active = active;
+      return { ok: true, message: active ? "Workflow switched on" : "Workflow switched off" };
+    },
     async nodes() {
       const now = Date.now();
       const count = (id: string) => services.filter((s) => s.node === id).length;

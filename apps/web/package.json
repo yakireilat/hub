@@ -14,6 +14,7 @@
   "dependencies": {
     "@hub/adapter-checks": "workspace:*",
     "@hub/adapter-mock": "workspace:*",
+    "@hub/adapter-n8n": "workspace:*",
     "@hub/adapter-prometheus": "workspace:*",
     "@hub/adapter-tailscale": "workspace:*",
     "@hub/core": "workspace:*",
