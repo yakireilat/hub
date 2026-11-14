@@ -10,8 +10,11 @@ export interface HubClient {
   capture(text: string): Promise<ActResult>;
   services(): Promise<ServicesPayload>;
   inbox(): Promise<InboxPayload>;
-  calendar(): Promise<CalendarPayload>;
+  /** The week containing `start` (YYYY-MM-DD), default this week. */
+  calendar(start?: string): Promise<CalendarPayload>;
   createEvent(input: NewEventInput): Promise<ActResult>;
+  updateEvent(id: string, input: NewEventInput): Promise<ActResult>;
+  deleteEvent(id: string): Promise<ActResult>;
   disconnectCalendar(): Promise<ActResult>;
   /** Where the browser goes to connect Google, or null where that isn't possible (the demo). */
   calendarConnectHref: string | null;

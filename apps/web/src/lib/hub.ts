@@ -12,6 +12,7 @@ import {
   mergeServices,
   pick,
   publicStatus,
+  sampleWeek,
   parseHubConfig,
   serviceInputSchema,
   serviceSlug,
@@ -374,44 +375,25 @@ export async function unsnoozeItem(itemId: string): Promise<ActResult> {
   return { ok: true, message: "Back in the Inbox" };
 }
 
-/** The Calendar screen: a week of events, or sample ones until Google is configured and connected. */
-export async function calendarPayload(): Promise<CalendarPayload> {
+/** The Calendar screen: the week containing `start` (default this week), or a sample week until Google is connected. */
+export async function calendarPayload(start?: string): Promise<CalendarPayload> {
   const { calendar, hub } = state();
+  const sample = async () =>
+    sampleWeek(await hub.items(), {
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      start,
+      now: Date.now(),
+      configured: !!calendar,
+    });
   if (calendar?.connected()) {
     try {
-      return await calendar.week();
+      return await calendar.week(start);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Google didn't answer";
-      return { ...(await sampleCalendar(hub, !!calendar)), sample: false, connected: calendar.connected(), days: [], error: message };
+      return { ...(await sample()), sample: false, connected: calendar.connected(), days: [], error: message };
     }
   }
-  return sampleCalendar(hub, !!calendar);
-}
-
-async function sampleCalendar(hub: Hub, configured: boolean): Promise<CalendarPayload> {
-  const items = (await hub.items()).filter((i) => i.source === "calendar");
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const day = (t: number) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(t);
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const date = day(Date.now() + i * 86_400_000);
-    return {
-      date,
-      events: items
-        .filter((it) => day(Date.parse(it.time)) === date)
-        .map((it) => ({
-          id: it.id.replace(/^calendar:/, ""),
-          title: it.title,
-          start: Date.parse(it.time),
-          end: Date.parse(it.time) + 3_600_000,
-          allDay: false,
-          calendar: "sample",
-          response: it.kind === "invite" ? ("needsAction" as const) : null,
-          href: it.href,
-        }))
-        .sort((a, b) => a.start - b.start),
-    };
-  });
-  return { connected: false, sample: true, configured, timeZone: tz, days, calendars: [{ id: "sample", name: "Sample", primary: true }] };
+  return sample();
 }
 
 /** Google's consent page, with `nonce` as the OAuth state the callback checks; null when not configured. */
@@ -428,6 +410,18 @@ export async function calendarCallback(code: string): Promise<void> {
 export function calendarDisconnect(): ActResult {
   state().calendar?.disconnect();
   return { ok: true, message: "Google Calendar disconnected" };
+}
+
+export async function updateCalendarEvent(id: string, input: NewEventInput): Promise<ActResult> {
+  const { calendar } = state();
+  if (!calendar?.connected()) return { ok: false, message: "Connect Google Calendar first" };
+  return calendar.updateEvent(id, input);
+}
+
+export async function deleteCalendarEvent(id: string): Promise<ActResult> {
+  const { calendar } = state();
+  if (!calendar?.connected()) return { ok: false, message: "Connect Google Calendar first" };
+  return calendar.deleteEvent(id);
 }
 
 export async function createCalendarEvent(input: NewEventInput): Promise<ActResult> {
