@@ -171,7 +171,7 @@ function Services() {
 
       {nodes && !editing && <NodeTiles data={nodes} />}
 
-      {(editing || data.sample) && <AddService nodes={data.nodes} onAdded={() => void reload()} />}
+      {(editing || data.sample) && <AddService nodes={data.nodes} removed={data.removed} onAdded={() => void reload()} />}
 
       {[...byNode].map(([node, list]) => (
         <section key={node} aria-labelledby={`node-${node}`} className="flex flex-col rounded-xl border border-line bg-surface px-4 py-2">

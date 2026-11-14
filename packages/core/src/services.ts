@@ -174,9 +174,20 @@ export interface ServiceView extends ManagedService {
   history: UptimeSummary;
 }
 
+/**
+ * The landing page's summary, in the shape mesh-dashboard served: answering services out of every
+ * service the hub monitors right now (services removed on the Services screen aren't monitored).
+ */
+export function publicStatus(views: Pick<ServiceView, "status">[]) {
+  const up = views.filter((v) => v.status === "up" || v.status === "slow").length;
+  return { up, total: views.length, nominal: views.length > 0 && up === views.length };
+}
+
 export interface ServicesPayload {
   services: ServiceView[];
   nodes: string[];
+  /** Services removed on the Services screen; they stay restorable from the Add panel. */
+  removed: Pick<ServiceDef, "id" | "name" | "url" | "node">[];
   /** True while no real services are configured and the screen shows sample data. */
   sample: boolean;
 }

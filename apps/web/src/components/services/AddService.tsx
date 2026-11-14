@@ -1,13 +1,22 @@
 "use client";
 
-import type { ServiceSuggestion } from "@hub/core";
+import type { ServicesPayload, ServiceSuggestion } from "@hub/core";
 import { useState, useTransition } from "react";
 import { useHub } from "@/components/shell/HubProvider";
 import { useToast } from "@/components/shell/Toast";
 import { ServiceForm } from "./ServiceForm";
 
 /** Smart add: type a name or address, check what the hub found, then save. */
-export function AddService({ nodes, onAdded }: { nodes: string[]; onAdded: () => void }) {
+export function AddService({
+  nodes,
+  removed = [],
+  onAdded,
+}: {
+  nodes: string[];
+  /** Services removed earlier, offered back with one click. */
+  removed?: ServicesPayload["removed"];
+  onAdded: () => void;
+}) {
   const { client, refresh } = useHub();
   const toast = useToast();
   const [input, setInput] = useState("");
@@ -84,6 +93,34 @@ export function AddService({ nodes, onAdded }: { nodes: string[]; onAdded: () =>
         <p className="text-[13px] text-st-failed">■ {error}</p>
       ) : (
         <p className="text-[13px] text-muted">The hub works out the app, its health check and the node. You confirm before anything is saved.</p>
+      )}
+      {removed.length > 0 && (
+        <div className="mt-2 flex flex-col gap-1.5">
+          <span className="text-[13px] text-muted">Removed earlier: not checked or counted until restored.</span>
+          <ul className="flex flex-wrap gap-2" aria-label="Removed services">
+            {removed.map((r) => (
+              <li key={r.id}>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() =>
+                    start(async () => {
+                      toast(await client.restoreService(r.id));
+                      onAdded();
+                      void refresh();
+                    })
+                  }
+                  aria-label={`Restore ${r.name}`}
+                  className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-3 text-[13px] text-fg hover:bg-raised disabled:opacity-60"
+                >
+                  <span aria-hidden="true">↺</span>
+                  {r.name}
+                  <span className="text-muted">· {r.node}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </form>
   );

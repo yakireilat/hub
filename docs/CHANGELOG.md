@@ -15,3 +15,5 @@
 - Services: node tiles with online / last seen from the Tailscale API and CPU, RAM, disk and temperature from Prometheus node-exporter (nodes matched by hostname).
 - Node tiles: match exporters by IP address correctly, map core-01 to its node-exporter, drop odin, and show which exporters match no node.
 - Checks: tcp:// and ping:// services; added Redis, Unbound and FlareSolverr from Uptime Kuma, and retired Uptime Kuma (status.mesh.net now redirects to the hub).
+- /api/public/status: the landing page's up/total/nominal summary, counted over every service the hub monitors (removed ones excluded), so mesh-dashboard can be retired.
+- Services: removed services are listed in the Add panel with a Restore button.
