@@ -17,6 +17,7 @@ const MIGRATIONS = [
   `CREATE TABLE checks (service_id TEXT NOT NULL, at INTEGER NOT NULL, status TEXT NOT NULL, ms INTEGER NOT NULL);
    CREATE INDEX checks_by_service ON checks (service_id, at)`,
   `CREATE TABLE snoozes (item_id TEXT PRIMARY KEY, until INTEGER NOT NULL)`,
+  `CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
 ];
 
 export interface HubDb extends CheckStore {
@@ -29,6 +30,9 @@ export interface HubDb extends CheckStore {
   snoozes(now: number): Map<string, number>;
   snooze(itemId: string, until: number): void;
   unsnooze(itemId: string): void;
+  /** Small key/value settings, e.g. the Google refresh token. */
+  getSetting(key: string): string | null;
+  setSetting(key: string, value: string | null): void;
 }
 
 export function openDb(file = path.join(process.env.HUB_DATA_DIR ?? "./data", "hub.db")): HubDb {
@@ -102,6 +106,14 @@ export function openDb(file = path.join(process.env.HUB_DATA_DIR ?? "./data", "h
     },
     unsnooze(itemId) {
       db.prepare("DELETE FROM snoozes WHERE item_id = ?").run(itemId);
+    },
+    getSetting(key) {
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key) as { value: string } | undefined;
+      return row?.value ?? null;
+    },
+    setSetting(key, value) {
+      if (value === null) db.prepare("DELETE FROM settings WHERE key = ?").run(key);
+      else db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").run(key, value);
     },
   };
 }

@@ -1,5 +1,6 @@
 export * from "./adapter";
 export * from "./automations";
+export * from "./calendar";
 export * from "./config";
 export * from "./hub";
 export * from "./inbox";

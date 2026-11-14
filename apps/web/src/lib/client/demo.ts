@@ -107,6 +107,40 @@ export function createDemoClient(): HubClient {
       sample: false,
     }),
     inbox: async () => buildInbox(await hub.items(), []),
+    async calendar() {
+      const items = (await hub.items()).filter((i) => i.source === "calendar");
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const day = (t: number) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(t);
+      return {
+        connected: false,
+        sample: true,
+        configured: false,
+        timeZone: tz,
+        calendars: [{ id: "sample", name: "Sample", primary: true }],
+        days: Array.from({ length: 7 }, (_, i) => {
+          const date = day(Date.now() + i * 86_400_000);
+          return {
+            date,
+            events: items
+              .filter((it) => day(Date.parse(it.time)) === date)
+              .map((it) => ({
+                id: it.id.replace(/^calendar:/, ""),
+                title: it.title,
+                start: Date.parse(it.time),
+                end: Date.parse(it.time) + 3_600_000,
+                allDay: false,
+                calendar: "sample",
+                response: it.kind === "invite" ? ("needsAction" as const) : null,
+                href: it.href,
+              }))
+              .sort((a, b) => a.start - b.start),
+          };
+        }),
+      };
+    },
+    createEvent: async () => ({ ok: false, message: "The demo has no Google Calendar" }),
+    disconnectCalendar: async () => ({ ok: true, message: "Nothing to disconnect in the demo" }),
+    calendarConnectHref: null,
     async snooze(itemId, until) {
       snoozes.set(itemId, until);
       return { ok: true, message: "Snoozed" };

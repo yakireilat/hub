@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@hub/adapter-checks": "workspace:*",
+    "@hub/adapter-google-calendar": "workspace:*",
     "@hub/adapter-mock": "workspace:*",
     "@hub/adapter-n8n": "workspace:*",
     "@hub/adapter-prometheus": "workspace:*",

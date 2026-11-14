@@ -18,7 +18,7 @@ const config: NextConfig = {
       }),
   // Lint runs once at the repo root (pnpm lint), not again inside next build.
   eslint: { ignoreDuringBuilds: true },
-  transpilePackages: ["@hub/core", "@hub/tokens", "@hub/adapter-mock", "@hub/adapter-checks", "@hub/adapter-tailscale", "@hub/adapter-prometheus", "@hub/adapter-n8n"],
+  transpilePackages: ["@hub/core", "@hub/tokens", "@hub/adapter-mock", "@hub/adapter-checks", "@hub/adapter-tailscale", "@hub/adapter-prometheus", "@hub/adapter-n8n", "@hub/adapter-google-calendar"],
 };
 
 export default config;
