@@ -16,6 +16,7 @@ const MIGRATIONS = [
      updated_at INTEGER NOT NULL)`,
   `CREATE TABLE checks (service_id TEXT NOT NULL, at INTEGER NOT NULL, status TEXT NOT NULL, ms INTEGER NOT NULL);
    CREATE INDEX checks_by_service ON checks (service_id, at)`,
+  `CREATE TABLE snoozes (item_id TEXT PRIMARY KEY, until INTEGER NOT NULL)`,
 ];
 
 export interface HubDb extends CheckStore {
@@ -24,6 +25,10 @@ export interface HubDb extends CheckStore {
   setDeleted(id: string, deleted: boolean): void;
   /** Drops check results older than `before` (epoch ms). */
   prune(before: number): void;
+  /** Inbox item id → snoozed until (epoch ms), for snoozes that haven't run out. */
+  snoozes(now: number): Map<string, number>;
+  snooze(itemId: string, until: number): void;
+  unsnooze(itemId: string): void;
 }
 
 export function openDb(file = path.join(process.env.HUB_DATA_DIR ?? "./data", "hub.db")): HubDb {
@@ -86,6 +91,17 @@ export function openDb(file = path.join(process.env.HUB_DATA_DIR ?? "./data", "h
     },
     prune(before) {
       db.prepare("DELETE FROM checks WHERE at < ?").run(before);
+      db.prepare("DELETE FROM snoozes WHERE until < ?").run(Date.now());
+    },
+    snoozes(now) {
+      const rows = db.prepare("SELECT item_id, until FROM snoozes WHERE until > ?").all(now) as { item_id: string; until: number }[];
+      return new Map(rows.map((r) => [r.item_id, r.until]));
+    },
+    snooze(itemId, until) {
+      db.prepare("INSERT INTO snoozes (item_id, until) VALUES (?, ?) ON CONFLICT (item_id) DO UPDATE SET until = excluded.until").run(itemId, until);
+    },
+    unsnooze(itemId) {
+      db.prepare("DELETE FROM snoozes WHERE item_id = ?").run(itemId);
     },
   };
 }

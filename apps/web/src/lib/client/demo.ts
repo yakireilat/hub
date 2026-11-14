@@ -1,6 +1,8 @@
 import { createMonitor, detectService } from "@hub/adapter-checks";
 import { createMockAdapters } from "@hub/adapter-mock";
 import {
+  applySnoozes,
+  buildInbox,
   createHub,
   serviceInputSchema,
   uniqueServiceId,
@@ -62,7 +64,8 @@ export function createDemoClient(): HubClient {
     },
   });
   const mocks = createMockAdapters().filter((m) => m.id !== "checks");
-  const hub = createHub([...mocks, monitor.adapter]);
+  const snoozes = new Map<string, number>();
+  const hub = createHub([...mocks, monitor.adapter], [], (items) => applySnoozes(items, snoozes, Date.now()));
   const nodes = ["core-01", "niflheim"];
   const run = (id: string, status: "success" | "error", minsAgo: number, ms: number) => ({
     id,
@@ -103,6 +106,15 @@ export function createDemoClient(): HubClient {
       removed: [...removed.values()].map(({ id, name, url, node }) => ({ id, name, url, node })),
       sample: false,
     }),
+    inbox: async () => buildInbox(await hub.items(), []),
+    async snooze(itemId, until) {
+      snoozes.set(itemId, until);
+      return { ok: true, message: "Snoozed" };
+    },
+    async unsnooze(itemId) {
+      snoozes.delete(itemId);
+      return { ok: true, message: "Back in the Inbox" };
+    },
     async automations() {
       return { sample: false, workflows: demoWorkflows.map((w) => ({ ...w, recent: [...w.recent] })) };
     },

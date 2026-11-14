@@ -16,6 +16,9 @@ import {
   serviceSlug,
   uniqueServiceId,
   type ActResult,
+  applySnoozes,
+  buildInbox,
+  type InboxPayload,
   type AutomationsPayload,
   type Adapter,
   type Hub,
@@ -70,7 +73,11 @@ function state(): State {
     ? createN8nAdapter({ client: createN8nClient({ url: config.n8n.url, apiKey }), publicUrl: config.n8n.public_url })
     : undefined;
   const replaced = new Set(["checks", ...(n8n ? ["n8n"] : [])]);
-  const hub = createHub([...mocks.filter((m) => !replaced.has(m.id)), checks, ...(n8n ? [n8n] : [])], config.inbox_rules);
+  const hub = createHub(
+    [...mocks.filter((m) => !replaced.has(m.id)), checks, ...(n8n ? [n8n] : [])],
+    config.inbox_rules,
+    (items) => applySnoozes(items, db.snoozes(Date.now()), Date.now()),
+  );
   g.__hubState = { hub, config, db, monitor, mockChecks, n8n };
   return g.__hubState;
 }
@@ -320,4 +327,21 @@ function sampleAutomations(): AutomationsPayload {
       { id: "3", name: "Pi-hole daily report", active: false, runsToday: 0, failedToday: 0, href: "https://n8n.mesh.net", recent: [] },
     ],
   };
+}
+
+/** The Inbox: runs, alerts, invites and services in trouble, with the rule that routed each. */
+export async function inboxPayload(): Promise<InboxPayload> {
+  const s = state();
+  return buildInbox(await s.hub.items(), s.config.inbox_rules);
+}
+
+export async function snoozeItem(itemId: string, until: number): Promise<ActResult> {
+  if (!Number.isFinite(until) || until <= Date.now()) return { ok: false, message: "Pick a time in the future" };
+  state().db.snooze(itemId, until);
+  return { ok: true, message: "Snoozed" };
+}
+
+export async function unsnoozeItem(itemId: string): Promise<ActResult> {
+  state().db.unsnooze(itemId);
+  return { ok: true, message: "Back in the Inbox" };
 }
