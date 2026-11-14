@@ -42,6 +42,13 @@ export default function TodayPage() {
     );
   }
   const fyiRuns = today.runs.ok;
+  // Failed first, then slow, then the rest by name; Today shows ten and links to the full list.
+  const serviceRank = { failed: 0, slow: 1, idle: 2, info: 2, up: 3 } as const;
+  const sortedServices = [...today.services].sort(
+    (a, b) => serviceRank[a.status] - serviceRank[b.status] || a.title.localeCompare(b.title),
+  );
+  const topServices = sortedServices.slice(0, 10);
+  const moreServices = sortedServices.length - topServices.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,7 +109,7 @@ export default function TodayPage() {
             Services
           </h2>
           <ul>
-            {today.services.map((s) => (
+            {topServices.map((s) => (
               <li key={s.id} className="flex min-h-8 items-center justify-between">
                 <span>{s.title}</span>
                 <span className={`text-xs ${statusText[s.status]}`}>
@@ -112,6 +119,9 @@ export default function TodayPage() {
               </li>
             ))}
           </ul>
+          <Link href="/services" className="mt-1.5 text-[13px] text-accent hover:text-accent-soft">
+            {moreServices > 0 ? `Open Services · ${moreServices} more →` : "Open Services →"}
+          </Link>
         </section>
 
         <section aria-labelledby="notes" className="flex flex-col gap-2.5 rounded-xl border border-line bg-surface p-4">

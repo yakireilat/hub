@@ -14,6 +14,14 @@ test.describe("Today", () => {
     await expect(page.getByTestId("now-line")).toBeVisible();
   });
 
+  test("services on Today: problems first, at most ten, with a link to the full list", async ({ page }) => {
+    await open(page);
+    const services = page.getByRole("region", { name: "Services" });
+    await expect(services.getByRole("listitem").first()).toContainText("Jellyfin");
+    expect(await services.getByRole("listitem").count()).toBeLessThanOrEqual(10);
+    await expect(services.getByRole("link", { name: /Open Services/ })).toHaveAttribute("href", "/services");
+  });
+
   test("status pairs a shape with a word", async ({ page }) => {
     await open(page);
     await expect(page.getByText("▲ slow · 2.4 s")).toBeVisible();

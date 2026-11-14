@@ -18,3 +18,4 @@
 - /api/public/status: the landing page's up/total/nominal summary, counted over every service the hub monitors (removed ones excluded), so mesh-dashboard can be retired.
 - Services: removed services are listed in the Add panel with a Restore button.
 - Phase 4a: real n8n runs on Today (failed runs need you, with Retry; successes grouped) and an Automations screen with on/off, recent runs and Retry, from the n8n public API (N8N_API_KEY).
+- Today: the Services card shows the ten most important services (failed, then slow, then the rest) and links to the full list.
