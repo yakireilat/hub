@@ -1,4 +1,4 @@
-import type { ActResult, AutomationsPayload, Command, NodesPayload, ServiceInput, ServiceSuggestion, ServicesPayload, ServiceView, TodayView } from "@hub/core";
+import type { ActResult, AutomationsPayload, Command, InboxPayload, NodesPayload, ServiceInput, ServiceSuggestion, ServicesPayload, ServiceView, TodayView } from "@hub/core";
 
 export type SaveResult = ActResult & { service?: ServiceView; errors?: Record<string, string> };
 
@@ -9,6 +9,9 @@ export interface HubClient {
   act(itemId: string, actionId: string): Promise<ActResult>;
   capture(text: string): Promise<ActResult>;
   services(): Promise<ServicesPayload>;
+  inbox(): Promise<InboxPayload>;
+  snooze(itemId: string, until: number): Promise<ActResult>;
+  unsnooze(itemId: string): Promise<ActResult>;
   /** n8n workflows with today's runs. */
   automations(): Promise<AutomationsPayload>;
   setWorkflowActive(id: string, active: boolean): Promise<ActResult>;

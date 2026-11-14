@@ -27,6 +27,9 @@ export const httpClient: HubClient = {
   capture: (text) => json<ActResult>("/capture", post({ text })),
   services: () => json("/services"),
   nodes: () => json("/nodes"),
+  inbox: () => json("/inbox"),
+  snooze: (itemId, until) => json<ActResult>(`/inbox/${enc(itemId)}/snooze`, post({ until })),
+  unsnooze: (itemId) => json<ActResult>(`/inbox/${enc(itemId)}/snooze`, send("DELETE")),
   automations: () => json("/automations"),
   setWorkflowActive: (id, active) => json<ActResult>(`/automations/${enc(id)}/active`, post({ active })),
   async detectService(input) {

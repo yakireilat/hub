@@ -17,10 +17,23 @@ function fieldOf(item: Item, key: string): string | undefined {
   }
 }
 
-/** First matching rule wins; an item no rule matches keeps the route its adapter gave it. */
+/**
+ * First matching rule wins; an item no rule matches keeps the route its adapter gave it. The
+ * matching rule's index is kept in `meta.rule`, so the Inbox can say why an item is where it is.
+ */
 export function applyRules(items: Item[], rules: InboxRule[]): Item[] {
   return items.map((item) => {
-    const rule = rules.find((r) => Object.entries(r.match).every(([k, v]) => fieldOf(item, k) === v));
-    return rule ? { ...item, route: rule.route } : item;
+    const i = rules.findIndex((r) => Object.entries(r.match).every(([k, v]) => fieldOf(item, k) === v));
+    return i < 0 ? item : { ...item, route: rules[i]!.route, meta: { ...item.meta, rule: i } };
   });
+}
+
+const ROUTE_WORD = { needs_action: "Needs action", fyi: "FYI", snoozed: "Snoozed" } as const;
+
+/** "source = n8n, status = error → Needs action, push: phone" */
+export function describeRule(rule: InboxRule): string {
+  const when = Object.entries(rule.match)
+    .map(([k, v]) => `${k} = ${v}`)
+    .join(", ");
+  return `${when} → ${ROUTE_WORD[rule.route]}${rule.push !== "none" ? `, push: ${rule.push}` : ""}`;
 }

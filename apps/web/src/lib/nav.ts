@@ -11,7 +11,7 @@ export interface NavEntry {
 export const NAV: NavEntry[] = [
   { slug: "today", href: "/", label: "Today", key: "t" },
   { slug: "calendar", href: "/calendar", label: "Calendar", key: "c", phase: 5 },
-  { slug: "inbox", href: "/inbox", label: "Inbox", key: "i", phase: 4 },
+  { slug: "inbox", href: "/inbox", label: "Inbox", key: "i" },
   { slug: "automations", href: "/automations", label: "Automations", key: "a" },
   { slug: "notes", href: "/notes", label: "Notes", key: "n", phase: 6 },
   { slug: "services", href: "/services", label: "Services", key: "s" },

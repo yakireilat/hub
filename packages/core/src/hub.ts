@@ -12,14 +12,18 @@ export interface Hub {
   act(itemId: string, actionId: string, input?: Record<string, unknown>): Promise<ActResult>;
 }
 
-export function createHub(adapters: Adapter[], rules: InboxRule[] = []): Hub {
+/**
+ * `overlay` runs after the routing rules on every read; the web app uses it to apply snoozes, so
+ * a snoozed item leaves Needs action everywhere (Today, the palette, the Inbox) until it wakes.
+ */
+export function createHub(adapters: Adapter[], rules: InboxRule[] = [], overlay: (items: Item[]) => Item[] = (x) => x): Hub {
   const bySource = new Map(adapters.map((a) => [a.id, a]));
 
   async function items(): Promise<Item[]> {
     // One slow or broken adapter must not blank the whole screen.
     const results = await Promise.allSettled(adapters.map((a) => a.read()));
     const all = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
-    return applyRules(all, rules).map(limitActions);
+    return overlay(applyRules(all, rules)).map(limitActions);
   }
 
   return {

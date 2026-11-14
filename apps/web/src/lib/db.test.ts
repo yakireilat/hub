@@ -23,6 +23,15 @@ describe("hub.db", () => {
     ]);
   });
 
+  it("snoozes until a time and forgets expired snoozes", () => {
+    const db = openDb(":memory:");
+    db.snooze("n8n:exec:105", 5_000);
+    db.snooze("checks:gitea", 1_000);
+    expect(db.snoozes(2_000)).toEqual(new Map([["n8n:exec:105", 5_000]]));
+    db.unsnooze("n8n:exec:105");
+    expect(db.snoozes(0)).toEqual(new Map([["checks:gitea", 1_000]]));
+  });
+
   it("keeps check history per service and prunes old results", () => {
     const db = openDb(":memory:");
     db.record([

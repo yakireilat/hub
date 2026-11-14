@@ -2,6 +2,7 @@ export * from "./adapter";
 export * from "./automations";
 export * from "./config";
 export * from "./hub";
+export * from "./inbox";
 export * from "./item";
 export * from "./nodes";
 export * from "./query";

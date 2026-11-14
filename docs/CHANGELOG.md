@@ -19,3 +19,4 @@
 - Services: removed services are listed in the Add panel with a Restore button.
 - Phase 4a: real n8n runs on Today (failed runs need you, with Retry; successes grouped) and an Automations screen with on/off, recent runs and Retry, from the n8n public API (N8N_API_KEY).
 - Today: the Services card shows the ten most important services (failed, then slow, then the rest) and links to the full list.
+- Phase 4b: Inbox with Needs action / FYI / Snoozed, source filters, a detail pane saying which hub.yaml rule routed each item, and snooze (1 h or until tomorrow 09:00) stored in hub.db; snoozed items leave Today too.
