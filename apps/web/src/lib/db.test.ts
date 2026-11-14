@@ -23,6 +23,16 @@ describe("hub.db", () => {
     ]);
   });
 
+  it("keeps and clears settings", () => {
+    const db = openDb(":memory:");
+    expect(db.getSetting("google.refresh_token")).toBeNull();
+    db.setSetting("google.refresh_token", "rt");
+    db.setSetting("google.refresh_token", "rt2");
+    expect(db.getSetting("google.refresh_token")).toBe("rt2");
+    db.setSetting("google.refresh_token", null);
+    expect(db.getSetting("google.refresh_token")).toBeNull();
+  });
+
   it("snoozes until a time and forgets expired snoozes", () => {
     const db = openDb(":memory:");
     db.snooze("n8n:exec:105", 5_000);

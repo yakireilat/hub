@@ -1,4 +1,4 @@
-import type { ActResult, AutomationsPayload, Command, InboxPayload, NodesPayload, ServiceInput, ServiceSuggestion, ServicesPayload, ServiceView, TodayView } from "@hub/core";
+import type { ActResult, AutomationsPayload, CalendarPayload, Command, InboxPayload, NewEventInput, NodesPayload, ServiceInput, ServiceSuggestion, ServicesPayload, ServiceView, TodayView } from "@hub/core";
 
 export type SaveResult = ActResult & { service?: ServiceView; errors?: Record<string, string> };
 
@@ -10,6 +10,11 @@ export interface HubClient {
   capture(text: string): Promise<ActResult>;
   services(): Promise<ServicesPayload>;
   inbox(): Promise<InboxPayload>;
+  calendar(): Promise<CalendarPayload>;
+  createEvent(input: NewEventInput): Promise<ActResult>;
+  disconnectCalendar(): Promise<ActResult>;
+  /** Where the browser goes to connect Google, or null where that isn't possible (the demo). */
+  calendarConnectHref: string | null;
   snooze(itemId: string, until: number): Promise<ActResult>;
   unsnooze(itemId: string): Promise<ActResult>;
   /** n8n workflows with today's runs. */

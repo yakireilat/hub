@@ -2,6 +2,7 @@ import "server-only";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createMonitor, detectService, type Monitor } from "@hub/adapter-checks";
+import { createGoogleCalendar, type GoogleCalendar } from "@hub/adapter-google-calendar";
 import { createMockAdapters } from "@hub/adapter-mock";
 import { createN8nAdapter, createN8nClient } from "@hub/adapter-n8n";
 import { nodeMetrics } from "@hub/adapter-prometheus";
@@ -20,6 +21,8 @@ import {
   buildInbox,
   type InboxPayload,
   type AutomationsPayload,
+  type CalendarPayload,
+  type NewEventInput,
   type Adapter,
   type Hub,
   type HubConfig,
@@ -35,6 +38,9 @@ import { openDb, type HubDb } from "./db";
 import { probe } from "./probes";
 
 /** hub.yaml from HUB_CONFIG, else HUB_DATA_DIR/hub.yaml. No file means defaults; a bad file throws. */
+/** Where the hub is reached from a browser; Google's sign-in comes back here. */
+export const PUBLIC_URL = (process.env.HUB_PUBLIC_URL ?? "https://hub.mesh.net").replace(/\/$/, "");
+
 export function loadConfig(): HubConfig {
   const file = process.env.HUB_CONFIG ?? path.join(process.env.HUB_DATA_DIR ?? "./data", "hub.yaml");
   return parseHubConfig(existsSync(file) ? readFileSync(file, "utf8") : "");
@@ -46,6 +52,8 @@ interface State {
   db: HubDb;
   monitor: Monitor;
   mockChecks: Adapter;
+  /** Google Calendar, when GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set (connected or not). */
+  calendar?: GoogleCalendar;
   /** The real n8n adapter, when N8N_API_KEY is set. */
   n8n?: ReturnType<typeof createN8nAdapter>;
   timer?: ReturnType<typeof setInterval>;
@@ -72,13 +80,33 @@ function state(): State {
   const n8n = apiKey
     ? createN8nAdapter({ client: createN8nClient({ url: config.n8n.url, apiKey }), publicUrl: config.n8n.public_url })
     : undefined;
-  const replaced = new Set(["checks", ...(n8n ? ["n8n"] : [])]);
+  // Google Calendar: configured by env, connected once someone signs in on the Calendar screen.
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const calendar =
+    clientId && clientSecret
+      ? createGoogleCalendar({
+          clientId,
+          clientSecret,
+          redirectUri: `${PUBLIC_URL}/api/v1/calendar/callback`,
+          tokens: { get: () => db.getSetting("google.refresh_token"), set: (v) => db.setSetting("google.refresh_token", v) },
+        })
+      : undefined;
+  const mockCalendar = mocks.find((m) => m.id === "calendar")!;
+  // Sample events until a Google account is connected; then only the real ones.
+  const calendarAdapter: Adapter = {
+    ...mockCalendar,
+    read: () => (calendar?.connected() ? calendar.adapter.read() : mockCalendar.read()),
+    act: (id, action, input) => (calendar?.connected() ? calendar.adapter.act(id, action, input) : mockCalendar.act(id, action, input)),
+    commands: () => (calendar?.connected() ? (calendar.adapter.commands?.() ?? []) : (mockCalendar.commands?.() ?? [])),
+  };
+  const replaced = new Set(["checks", "calendar", ...(n8n ? ["n8n"] : [])]);
   const hub = createHub(
-    [...mocks.filter((m) => !replaced.has(m.id)), checks, ...(n8n ? [n8n] : [])],
+    [...mocks.filter((m) => !replaced.has(m.id)), checks, calendarAdapter, ...(n8n ? [n8n] : [])],
     config.inbox_rules,
     (items) => applySnoozes(items, db.snoozes(Date.now()), Date.now()),
   );
-  g.__hubState = { hub, config, db, monitor, mockChecks, n8n };
+  g.__hubState = { hub, config, db, monitor, mockChecks, n8n, calendar };
   return g.__hubState;
 }
 
@@ -345,3 +373,66 @@ export async function unsnoozeItem(itemId: string): Promise<ActResult> {
   state().db.unsnooze(itemId);
   return { ok: true, message: "Back in the Inbox" };
 }
+
+/** The Calendar screen: a week of events, or sample ones until Google is configured and connected. */
+export async function calendarPayload(): Promise<CalendarPayload> {
+  const { calendar, hub } = state();
+  if (calendar?.connected()) {
+    try {
+      return await calendar.week();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Google didn't answer";
+      return { ...(await sampleCalendar(hub, !!calendar)), sample: false, connected: calendar.connected(), days: [], error: message };
+    }
+  }
+  return sampleCalendar(hub, !!calendar);
+}
+
+async function sampleCalendar(hub: Hub, configured: boolean): Promise<CalendarPayload> {
+  const items = (await hub.items()).filter((i) => i.source === "calendar");
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const day = (t: number) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(t);
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const date = day(Date.now() + i * 86_400_000);
+    return {
+      date,
+      events: items
+        .filter((it) => day(Date.parse(it.time)) === date)
+        .map((it) => ({
+          id: it.id.replace(/^calendar:/, ""),
+          title: it.title,
+          start: Date.parse(it.time),
+          end: Date.parse(it.time) + 3_600_000,
+          allDay: false,
+          calendar: "sample",
+          response: it.kind === "invite" ? ("needsAction" as const) : null,
+          href: it.href,
+        }))
+        .sort((a, b) => a.start - b.start),
+    };
+  });
+  return { connected: false, sample: true, configured, timeZone: tz, days, calendars: [{ id: "sample", name: "Sample", primary: true }] };
+}
+
+/** Google's consent page, with `nonce` as the OAuth state the callback checks; null when not configured. */
+export function calendarConnectUrl(nonce: string): string | null {
+  return state().calendar?.authUrl(nonce) ?? null;
+}
+
+export async function calendarCallback(code: string): Promise<void> {
+  const { calendar } = state();
+  if (!calendar) throw new Error("Google Calendar isn't configured: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET");
+  await calendar.connect(code);
+}
+
+export function calendarDisconnect(): ActResult {
+  state().calendar?.disconnect();
+  return { ok: true, message: "Google Calendar disconnected" };
+}
+
+export async function createCalendarEvent(input: NewEventInput): Promise<ActResult> {
+  const { calendar } = state();
+  if (!calendar?.connected()) return { ok: false, message: "Connect Google Calendar first" };
+  return calendar.createEvent(input);
+}
+
