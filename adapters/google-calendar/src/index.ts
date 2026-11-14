@@ -1,4 +1,4 @@
-import type { ActResult, Adapter, CalendarDay, CalendarEvent, CalendarPayload, Command, Item, NewEventInput } from "@hub/core";
+import { dayIn, midnight, weekStart, type ActResult, type Adapter, type CalendarDay, type CalendarEvent, type CalendarPayload, type Command, type Item, type NewEventInput } from "@hub/core";
 
 const AUTH = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN = "https://oauth2.googleapis.com/token";
@@ -35,38 +35,10 @@ interface GEvent {
   start: { dateTime?: string; date?: string };
   end: { dateTime?: string; date?: string };
   attendees?: { email: string; self?: boolean; responseStatus?: string }[];
+  organizer?: { email?: string; self?: boolean };
 }
 
-/** How far `tz` is ahead of UTC at instant `t`, in ms. */
-function tzOffset(tz: string, t: number): number {
-  const p = Object.fromEntries(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: tz,
-      hourCycle: "h23",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-      .formatToParts(t)
-      .map((x) => [x.type, x.value]),
-  );
-  return Date.UTC(+p.year!, +p.month! - 1, +p.day!, +p.hour!, +p.minute!, +p.second!) - Math.floor(t / 1000) * 1000;
-}
-
-/** YYYY-MM-DD of instant `t` in `tz`. */
-export function dayIn(tz: string, t: number): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(t);
-}
-
-/** Epoch ms of 00:00 on `date` (YYYY-MM-DD) in `tz`. */
-export function midnight(tz: string, date: string): number {
-  const [y, m, d] = date.split("-").map(Number);
-  const guess = Date.UTC(y!, m! - 1, d!);
-  return guess - tzOffset(tz, guess - tzOffset(tz, guess));
-}
+export { dayIn, midnight, weekStart };
 
 /** Google Calendar through its REST API, with one Google account connected by OAuth. */
 export function createGoogleCalendar(opts: {
@@ -80,7 +52,8 @@ export function createGoogleCalendar(opts: {
   const fetchFn = opts.fetchFn ?? fetch;
   const now = opts.now ?? Date.now;
   let access: { token: string; until: number } | undefined;
-  let cache: { at: number; value: Promise<Snapshot> } | undefined;
+  // One cached snapshot per week start ("" = the rolling window from today).
+  const cache = new Map<string, { at: number; value: Promise<Snapshot> }>();
 
   interface Snapshot {
     timeZone: string;
@@ -117,16 +90,18 @@ export function createGoogleCalendar(opts: {
   }
 
   async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+    // DELETE answers 204 with no body.
     const res = await fetchFn(`${API}${path}`, {
       ...init,
       headers: { authorization: `Bearer ${await bearer()}`, "content-type": "application/json", ...(init.headers as Record<string, string>) },
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) throw new Error(`Google Calendar answered HTTP ${res.status}`);
+    if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
   }
 
-  function toEvent(calId: string, tz: string, e: GEvent): CalendarEvent {
+  function toEvent(calId: string, tz: string, e: GEvent, writable: boolean): CalendarEvent {
     const allDay = !e.start.dateTime;
     const start = allDay ? midnight(tz, e.start.date!) : Date.parse(e.start.dateTime!);
     const end = allDay ? midnight(tz, e.end.date!) : Date.parse(e.end.dateTime ?? e.start.dateTime!);
@@ -140,34 +115,44 @@ export function createGoogleCalendar(opts: {
       calendar: calId,
       ...(e.location ? { location: e.location } : {}),
       response: (self?.responseStatus as CalendarEvent["response"]) ?? null,
+      // Yours to change: on a calendar you can write to, and you organise it (or it has no guests).
+      editable: writable && (!e.attendees?.length || e.organizer?.self === true),
       href: e.htmlLink ?? "https://calendar.google.com",
     };
   }
 
-  /** Visible calendars and their events from today 00:00 to 7 days ahead. Cached 2 minutes. */
-  function snapshot(): Promise<Snapshot> {
-    if (cache && now() - cache.at < CACHE_MS) return cache.value;
+  /**
+   * Visible calendars and their events for 8 days from `start` (YYYY-MM-DD; default today) in the
+   * primary calendar's time zone. Cached 2 minutes per start date.
+   */
+  function snapshot(start = ""): Promise<Snapshot> {
+    const hit = cache.get(start);
+    if (hit && now() - hit.at < CACHE_MS) return hit.value;
     const value = (async () => {
       const { items } = await api<{ items: GCalendar[] }>("/users/me/calendarList?minAccessRole=reader");
       const calendars = items.filter((c) => c.selected || c.primary);
       const timeZone = calendars.find((c) => c.primary)?.timeZone ?? "UTC";
-      const from = midnight(timeZone, dayIn(timeZone, now()));
+      const from = midnight(timeZone, start || dayIn(timeZone, now()));
       const to = from + 8 * DAY;
       const lists = await Promise.all(
         calendars.map((c) =>
           api<{ items: GEvent[] }>(
             `/calendars/${encodeURIComponent(c.id)}/events?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${new Date(from).toISOString()}&timeMax=${new Date(to).toISOString()}`,
-          ).then((r) => r.items.filter((e) => e.status !== "cancelled").map((e) => toEvent(c.id, timeZone, e))),
+          ).then((r) =>
+            r.items
+              .filter((e) => e.status !== "cancelled")
+              .map((e) => toEvent(c.id, timeZone, e, c.accessRole === "owner" || c.accessRole === "writer")),
+          ),
         ),
       );
       const events = lists.flat().sort((a, b) => a.start - b.start);
       return { timeZone, calendars, events };
     })();
-    cache = { at: now(), value };
-    value.catch(() => (cache = undefined));
+    cache.set(start, { at: now(), value });
+    value.catch(() => cache.delete(start));
     return value;
   }
-  const invalidate = () => (cache = undefined);
+  const invalidate = () => cache.clear();
 
   const hhmmIn = (tz: string, t: number) =>
     new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit" }).format(t);
@@ -223,9 +208,11 @@ export function createGoogleCalendar(opts: {
     }
   }
 
-  async function week(): Promise<CalendarPayload> {
-    const { timeZone, calendars, events } = await snapshot();
-    const first = dayIn(timeZone, now());
+  /** The week (Sunday to Saturday) containing `start`, default this week. */
+  async function week(start?: string): Promise<CalendarPayload> {
+    const tz = (await snapshot()).timeZone;
+    const first = weekStart(start ?? dayIn(tz, now()));
+    const { timeZone, calendars, events } = await snapshot(first);
     const days: CalendarDay[] = Array.from({ length: 7 }, (_, i) => {
       const date = dayIn(timeZone, midnight(timeZone, first) + i * DAY + 12 * 3_600_000);
       return { date, events: events.filter((e) => dayIn(timeZone, e.start) === date && e.response !== "declined") };
@@ -235,6 +222,8 @@ export function createGoogleCalendar(opts: {
       sample: false,
       configured: true,
       timeZone,
+      start: first,
+      today: dayIn(timeZone, now()),
       days,
       calendars: calendars
         .filter((c) => c.accessRole === "owner" || c.accessRole === "writer")
@@ -242,32 +231,67 @@ export function createGoogleCalendar(opts: {
     };
   }
 
+  /** Google's start/end for a form's date, time and duration; a message when the input is wrong. */
+  function times(timeZone: string, input: NewEventInput): { start: object; end: object } | string {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return "Pick a date";
+    if (!input.time) {
+      const next = dayIn(timeZone, midnight(timeZone, input.date) + 36 * 3_600_000);
+      return { start: { date: input.date }, end: { date: next } };
+    }
+    if (!/^\d{2}:\d{2}$/.test(input.time)) return "Use a time like 14:30";
+    const [h, m] = input.time.split(":").map(Number);
+    const s = midnight(timeZone, input.date) + (h! * 60 + m!) * 60_000;
+    const e = s + Math.max(5, input.durationMin ?? 60) * 60_000;
+    return { start: { dateTime: new Date(s).toISOString(), timeZone }, end: { dateTime: new Date(e).toISOString(), timeZone } };
+  }
+
   async function createEvent(input: NewEventInput): Promise<ActResult> {
     const title = input.title?.trim();
     if (!title) return { ok: false, message: "Give the event a title" };
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { ok: false, message: "Pick a date" };
     try {
       const { timeZone, calendars } = await snapshot();
+      const t = times(timeZone, input);
+      if (typeof t === "string") return { ok: false, message: t };
       const calId = input.calendarId ?? calendars.find((c) => c.primary)?.id ?? "primary";
-      let start: Record<string, string>;
-      let end: Record<string, string>;
-      if (input.time) {
-        if (!/^\d{2}:\d{2}$/.test(input.time)) return { ok: false, message: "Use a time like 14:30" };
-        const [h, m] = input.time.split(":").map(Number);
-        const s = midnight(timeZone, input.date) + (h! * 60 + m!) * 60_000;
-        const e = s + Math.max(5, input.durationMin ?? 60) * 60_000;
-        start = { dateTime: new Date(s).toISOString(), timeZone };
-        end = { dateTime: new Date(e).toISOString(), timeZone };
-      } else {
-        const next = dayIn(timeZone, midnight(timeZone, input.date) + 36 * 3_600_000);
-        start = { date: input.date };
-        end = { date: next };
-      }
-      await api(`/calendars/${encodeURIComponent(calId)}/events`, { method: "POST", body: JSON.stringify({ summary: title, start, end }) });
+      await api(`/calendars/${encodeURIComponent(calId)}/events`, { method: "POST", body: JSON.stringify({ summary: title, ...t }) });
       invalidate();
       return { ok: true, message: `Added “${title}”` };
     } catch (e) {
       return { ok: false, message: e instanceof Error ? e.message : "Google didn't add the event" };
+    }
+  }
+
+  const eventPath = (id: string) => {
+    const [calId, eventId] = id.split("|");
+    return calId && eventId ? `/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(eventId)}` : null;
+  };
+
+  /** Changes title and time; guests are told (sendUpdates=all). */
+  async function updateEvent(id: string, input: NewEventInput): Promise<ActResult> {
+    const title = input.title?.trim();
+    const path = eventPath(id);
+    if (!path) return { ok: false, message: "Unknown event" };
+    if (!title) return { ok: false, message: "Give the event a title" };
+    try {
+      const t = times((await snapshot()).timeZone, input);
+      if (typeof t === "string") return { ok: false, message: t };
+      await api(`${path}?sendUpdates=all`, { method: "PATCH", body: JSON.stringify({ summary: title, ...t }) });
+      invalidate();
+      return { ok: true, message: `Saved “${title}”` };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : "Google didn't save the change" };
+    }
+  }
+
+  async function deleteEvent(id: string): Promise<ActResult> {
+    const path = eventPath(id);
+    if (!path) return { ok: false, message: "Unknown event" };
+    try {
+      await api(`${path}?sendUpdates=all`, { method: "DELETE" });
+      invalidate();
+      return { ok: true, message: "Event deleted" };
+    } catch (e) {
+      return { ok: false, message: e instanceof Error ? e.message : "Google didn't delete the event" };
     }
   }
 
@@ -311,6 +335,8 @@ export function createGoogleCalendar(opts: {
     },
     week,
     createEvent,
+    updateEvent,
+    deleteEvent,
   };
 }
 
