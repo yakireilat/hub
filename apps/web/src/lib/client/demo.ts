@@ -84,7 +84,12 @@ export function createDemoClient(): HubClient {
     commands: () => hub.commands(),
     act: (itemId, actionId) => hub.act(itemId, actionId),
     capture: async (text) => captureResult(text),
-    services: async () => ({ services: await monitor.views(), nodes, sample: false }),
+    services: async () => ({
+      services: await monitor.views(),
+      nodes,
+      removed: [...removed.values()].map(({ id, name, url, node }) => ({ id, name, url, node })),
+      sample: false,
+    }),
     async nodes() {
       const now = Date.now();
       const count = (id: string) => services.filter((s) => s.node === id).length;

@@ -39,6 +39,12 @@ test("Smart add checks a new service, keeps its history, and remove has undo", a
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(page.getByRole("button", { name: "Remove Hub itself" })).toBeVisible();
 
+  // A removed service waits in the Add panel and comes back with one click.
+  await page.getByRole("button", { name: "Remove Hub itself" }).click();
+  await page.getByRole("button", { name: "Restore Hub itself" }).click();
+  await expect(page.getByRole("button", { name: "Remove Hub itself" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Restore Hub itself" })).toHaveCount(0);
+
   await page.getByRole("button", { name: "Edit Hub itself" }).click();
   const edit = page.getByRole("form", { name: "Save Hub itself" });
   await edit.getByLabel("Slow after (ms)").fill("3000");
@@ -70,4 +76,13 @@ test("Node tiles show online state and metrics with words, not colour alone", as
   await expect(core).toContainText("CPU");
   await expect(core).toContainText("34%");
   await expect(nodes.getByRole("article", { name: /^niflheim\. Offline · seen 3 h ago/ })).toContainText("No metrics");
+});
+
+test("The public status endpoint keeps mesh-dashboard's shape for the landing page", async ({ request }) => {
+  const res = await request.get("/api/public/status");
+  expect(res.ok()).toBe(true);
+  const body = await res.json();
+  expect(Object.keys(body).sort()).toEqual(["nominal", "total", "up"]);
+  expect(typeof body.up).toBe("number");
+  expect(typeof body.nominal).toBe("boolean");
 });

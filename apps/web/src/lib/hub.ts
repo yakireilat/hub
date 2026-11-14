@@ -9,6 +9,7 @@ import {
   createHub,
   mergeServices,
   pick,
+  publicStatus,
   parseHubConfig,
   serviceInputSchema,
   serviceSlug,
@@ -95,7 +96,11 @@ function nodes(s: State): string[] {
 
 export async function servicesPayload(): Promise<ServicesPayload> {
   const s = state();
-  if (s.monitor.services().length) return { services: await s.monitor.views(), nodes: nodes(s), sample: false };
+  const removed = s.db
+    .services()
+    .filter((r) => r.deleted)
+    .map(({ id, name, url, node }) => ({ id, name, url, node }));
+  if (s.monitor.services().length) return { services: await s.monitor.views(), nodes: nodes(s), removed, sample: false };
   // No real services yet: show the sample ones so the screen isn't empty, without history.
   const items = await s.mockChecks.read();
   const services: ServiceView[] = items.map((i) => ({
@@ -113,7 +118,7 @@ export async function servicesPayload(): Promise<ServicesPayload> {
     sinceAtLeast: false,
     history: { buckets: [], uptime24h: null, uptime7d: null, failures24h: 0 },
   }));
-  return { services, nodes: nodes(s), sample: true };
+  return { services, nodes: nodes(s), removed, sample: true };
 }
 
 export async function suggestService(input: string): Promise<ServiceSuggestion> {
@@ -262,4 +267,11 @@ function sampleNodes(): NodesPayload {
       },
     ],
   };
+}
+
+/** The landing page's summary. Public (no sign-in) through nginx, so it says nothing but counts. */
+export async function publicStatusPayload() {
+  const s = state();
+  // monitor.views() is the live list: hub.yaml plus services added here, minus ones removed here.
+  return publicStatus(await s.monitor.views());
 }
