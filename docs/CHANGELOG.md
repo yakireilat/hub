@@ -24,3 +24,4 @@
 - Calendar: a Google/Outlook-style week grid on desktop (hours, overlapping events side by side, all-day row, now line, week navigation), the day list on phones, and editing: change or delete your own events, click a slot to add one.
 - Phase 6a: CouchDB on core-01 (couch.mesh.net) for Obsidian Self-hosted LiveSync on YPC and iPhone; nginx snippet, health check and setup guide (docs/notes-sync.md).
 - Vault sync parked: CouchDB taken out of the hub stack after it failed its first deploy (deploys work again); deploy.sh now names the failing container.
+- Phase 7a: API for system users — scoped, expiring tokens (hashed in hub.db, shown once), a guard and audit log on every /api/v1 call, Settings → API to create, revoke and audit them, OpenAPI at /api/v1/openapi.json, and an nginx snippet for hub-api.mesh.net.

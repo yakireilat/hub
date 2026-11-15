@@ -45,3 +45,8 @@ inbox_rules:
   # A core-01 service down needs you; the other nodes are often off on purpose, so they stay FYI.
   - match: { source: checks, status: error, node: core-01 }
     route: needs_action
+
+# The API for system users (Settings → API). Machines call public_url with a hub token.
+api:
+  public_url: https://hub-api.mesh.net
+  audit_days: 90

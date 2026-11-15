@@ -47,4 +47,7 @@ export const httpClient: HubClient = {
   updateService: (id, input) => json<SaveResult>(`/services/${enc(id)}`, send("PATCH", input)),
   removeService: (id) => json<ActResult>(`/services/${enc(id)}`, send("DELETE")),
   restoreService: (id) => json<ActResult>(`/services/${enc(id)}/restore`, post({})),
+  tokens: () => json("/tokens"),
+  createToken: (input) => json("/tokens", post(input)),
+  revokeToken: (id) => json<ActResult>(`/tokens/${enc(id)}`, send("DELETE")),
 };

@@ -14,7 +14,7 @@ export interface Item {
   /** Unique across adapters: `<source>:<native id>`. */
   id: string;
   source: string;
-  kind: "event" | "run" | "alert" | "note" | "service" | "invite";
+  kind: "event" | "run" | "alert" | "note" | "service" | "invite" | "token" | "audit";
   title: string;
   /** One line of context, shown under the title. */
   context: string;
