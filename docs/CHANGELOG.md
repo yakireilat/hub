@@ -22,3 +22,4 @@
 - Phase 4b: Inbox with Needs action / FYI / Snoozed, source filters, a detail pane saying which hub.yaml rule routed each item, and snooze (1 h or until tomorrow 09:00) stored in hub.db; snoozed items leave Today too.
 - Phase 5: Google Calendar — connect from the Calendar screen (OAuth, refresh token in hub.db), today's events on Today, unanswered invites in Needs action with Accept/Decline, a 7-day Calendar screen and New event.
 - Calendar: a Google/Outlook-style week grid on desktop (hours, overlapping events side by side, all-day row, now line, week navigation), the day list on phones, and editing: change or delete your own events, click a slot to add one.
+- Phase 6a: CouchDB on core-01 (couch.mesh.net) for Obsidian Self-hosted LiveSync on YPC and iPhone; nginx snippet, health check and setup guide (docs/notes-sync.md).
