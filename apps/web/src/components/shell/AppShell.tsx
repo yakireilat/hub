@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="w-full max-w-[1180px] flex-1 px-4 pb-28 pt-6 md:px-7 md:pb-10">{children}</main>
       </div>
 
-      <nav aria-label="Tabs" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-divider bg-rail px-2 pb-6 pt-1.5 md:hidden">
+      <nav aria-label="Tabs" className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-divider bg-rail px-2 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-1.5 md:hidden">
         {NAV.filter((n) => MOBILE_TABS.includes(n.slug)).map((n) => (
           <Link
             key={n.slug}
