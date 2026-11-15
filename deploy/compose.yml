@@ -25,30 +25,6 @@ services:
       retries: 3
       start_period: 20s
 
-  # Obsidian vault sync (Self-hosted LiveSync plugin on YPC and iPhone). nginx serves it at
-  # couch.mesh.net with CouchDB's own login, not Authelia: the Obsidian apps can't pass a login page.
-  # COUCHDB_USER and COUCHDB_PASSWORD come from /mesh/data/hub/.env (compose reads it for ${...}).
-  couchdb:
-    image: couchdb:3.5.2
-    container_name: couchdb
-    restart: unless-stopped
-    mem_limit: 384m
-    environment:
-      COUCHDB_USER: ${COUCHDB_USER:?set COUCHDB_USER in /mesh/data/hub/.env}
-      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD:?set COUCHDB_PASSWORD in /mesh/data/hub/.env}
-    volumes:
-      - ./couchdb/data:/opt/couchdb/data
-      - ./couchdb.ini:/opt/couchdb/etc/local.d/hub.ini:ro
-    networks:
-      mesh:
-        ipv4_address: 172.19.0.52
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5984/_up >/dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
 networks:
   # Shared with nginx, so it can proxy hub.mesh.net to hub-web:3000.
   # Fixed IPs: services there pin low addresses, and a dynamic one can take them on a docker restart.

@@ -1,3 +1,9 @@
+> **Parked (2026-11-15).** CouchDB failed its health check on its first deploy and was taken out of
+> `deploy/compose.yml`. Suspected cause: `deploy/couchdb.ini` is mounted read-only into
+> `/opt/couchdb/etc/local.d`, and the image's start script changes ownership there. Next attempt:
+> apply the settings through CouchDB's config API after start instead of a mounted file, and give the
+> health check the admin login. `couchdb.ini` and the nginx snippet are kept for that.
+
 # Vault sync: Obsidian on YPC and iPhone through CouchDB
 
 The vault syncs with the free **Self-hosted LiveSync** plugin through CouchDB on core-01

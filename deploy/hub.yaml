@@ -26,7 +26,6 @@ services:
   - { name: Woodpecker CI, url: https://ci.mesh.net, health: http://woodpecker-server:8000/healthz }
   - { name: Mesh dashboard, url: https://mesh.net, health: http://mesh-dashboard:3000/ }
   # Not web apps: tcp:// checks that the port accepts a connection, ping:// sends one ICMP echo.
-  - { name: CouchDB (vault sync), url: https://couch.mesh.net/_utils/, health: http://couchdb:5984/_up }
   - { name: Redis, url: "tcp://redis:6379" }
   - { name: Unbound, url: "tcp://unbound:53" }
   # niflheim
