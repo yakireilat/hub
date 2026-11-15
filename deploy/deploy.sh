@@ -7,11 +7,10 @@ cd "$(dirname "$0")"
 new=$1
 prev=$(cat .image 2>/dev/null || true)
 
-mkdir -p data backups couchdb/data
+mkdir -p data backups
 # ponytail: tar of live SQLite files; switch to `sqlite3 .backup` once the worker writes often.
 # ntfy/ is the retired ntfy's data, kept for a rollback; back it up while it is still there.
-# couchdb/ is the synced vault (CouchDB only appends, so a live copy is consistent enough to restore).
-tar -czf "backups/data-$(date +%Y%m%d-%H%M%S).tgz" data couchdb $([ -d ntfy ] && echo ntfy)
+tar -czf "backups/data-$(date +%Y%m%d-%H%M%S).tgz" data $([ -d ntfy ] && echo ntfy)
 ls -1t backups/*.tgz | tail -n +11 | xargs -r rm --
 
 # --remove-orphans: containers this stack no longer defines (the old ntfy) are removed, nothing else.
@@ -43,8 +42,10 @@ if up "$new"; then
   exit 0
 fi
 
-echo "hub-web did not become healthy on $new" >&2
-HUB_IMAGE=$new docker compose logs --tail 50 hub-web >&2 || true
+# Name the container that failed instead of assuming hub-web.
+echo "the hub stack did not become healthy on $new:" >&2
+HUB_IMAGE=$new docker compose ps --all --format '{{.Name}}: {{.State}} {{.Health}}' >&2 || true
+HUB_IMAGE=$new docker compose logs --tail 50 >&2 || true
 if [ -n "$prev" ]; then
   up "$prev" && echo "rolled back to $prev" >&2
 fi

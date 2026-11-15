@@ -85,7 +85,7 @@ jobs:
       - name: Copy compose, deploy script and hub.yaml
         # hub.yaml in the repo is the source of truth; services added in the UI live in hub.db, not here.
         run: |
-          scp deploy/compose.yml deploy/deploy.sh deploy/couchdb.ini "$TARGET:$DIR/"
+          scp deploy/compose.yml deploy/deploy.sh "$TARGET:$DIR/"
           scp deploy/hub.yaml "$TARGET:$DIR/data/hub.yaml"
       - name: Deploy
         run: |
