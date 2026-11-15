@@ -25,3 +25,4 @@
 - Phase 6a: CouchDB on core-01 (couch.mesh.net) for Obsidian Self-hosted LiveSync on YPC and iPhone; nginx snippet, health check and setup guide (docs/notes-sync.md).
 - Vault sync parked: CouchDB taken out of the hub stack after it failed its first deploy (deploys work again); deploy.sh now names the failing container.
 - Phase 7a: API for system users — scoped, expiring tokens (hashed in hub.db, shown once), a guard and audit log on every /api/v1 call, Settings → API to create, revoke and audit them, OpenAPI at /api/v1/openapi.json, and an nginx snippet for hub-api.mesh.net.
+- Phase 8a: installable hub — web app manifest (sent with credentials so Authelia lets it through), home-screen icons from the tokens, iPhone full-screen tags, tab bar above the home indicator, and an offline page when the hub can't be reached; API for system users left unexposed for now.
