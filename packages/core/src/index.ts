@@ -1,4 +1,5 @@
 export * from "./adapter";
+export * from "./api";
 export * from "./automations";
 export * from "./calendar";
 export * from "./config";

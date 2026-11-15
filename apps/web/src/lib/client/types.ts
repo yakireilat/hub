@@ -1,4 +1,4 @@
-import type { ActResult, AutomationsPayload, CalendarPayload, Command, InboxPayload, NewEventInput, NodesPayload, ServiceInput, ServiceSuggestion, ServicesPayload, ServiceView, TodayView } from "@hub/core";
+import type { ActResult, AutomationsPayload, CalendarPayload, Command, InboxPayload, NewEventInput, NewTokenInput, NodesPayload, ServiceInput, ServiceSuggestion, ServicesPayload, ServiceView, TodayView, TokensPayload } from "@hub/core";
 
 export type SaveResult = ActResult & { service?: ServiceView; errors?: Record<string, string> };
 
@@ -31,4 +31,9 @@ export interface HubClient {
   updateService(id: string, input: ServiceInput): Promise<SaveResult>;
   removeService(id: string): Promise<ActResult>;
   restoreService(id: string): Promise<ActResult>;
+  /** Settings → API: tokens and the audit log. People only. */
+  tokens(): Promise<TokensPayload>;
+  /** The answer carries the token itself, once. */
+  createToken(input: NewTokenInput): Promise<ActResult & { token?: string }>;
+  revokeToken(id: string): Promise<ActResult>;
 }

@@ -3,7 +3,9 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { CheckStore } from "@hub/adapter-checks";
-import type { CheckSample, StoredService } from "@hub/core";
+import type { AuditEntry, CheckSample, ApiScope, StoredService, TokenView } from "@hub/core";
+
+export type TokenRow = TokenView & { secretHash: string };
 
 /**
  * The hub's SQLite file, $HUB_DATA_DIR/hub.db. Migrations only ever add (CLAUDE.md), so an older
@@ -18,6 +20,13 @@ const MIGRATIONS = [
    CREATE INDEX checks_by_service ON checks (service_id, at)`,
   `CREATE TABLE snoozes (item_id TEXT PRIMARY KEY, until INTEGER NOT NULL)`,
   `CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+  `CREATE TABLE api_tokens (
+     id TEXT PRIMARY KEY, name TEXT NOT NULL, scopes TEXT NOT NULL, secret_hash TEXT NOT NULL,
+     created_at INTEGER NOT NULL, expires_at INTEGER, last_used_at INTEGER, revoked_at INTEGER);
+   CREATE TABLE api_audit (
+     at INTEGER NOT NULL, token_id TEXT NOT NULL, token_name TEXT NOT NULL, method TEXT NOT NULL,
+     path TEXT NOT NULL, access TEXT NOT NULL, result TEXT NOT NULL, status INTEGER NOT NULL);
+   CREATE INDEX api_audit_by_time ON api_audit (at)`,
 ];
 
 export interface HubDb extends CheckStore {
@@ -33,7 +42,27 @@ export interface HubDb extends CheckStore {
   /** Small key/value settings, e.g. the Google refresh token. */
   getSetting(key: string): string | null;
   setSetting(key: string, value: string | null): void;
+  tokens(): TokenView[];
+  token(id: string): TokenRow | null;
+  saveToken(t: TokenRow): void;
+  revokeToken(id: string, at: number): boolean;
+  touchToken(id: string, at: number): void;
+  audit(entry: AuditEntry): void;
+  /** Newest first. */
+  auditLog(limit: number): (AuditEntry)[];
+  pruneAudit(before: number): void;
 }
+
+const tokenOf = (r: Record<string, unknown>): TokenRow => ({
+  id: String(r.id),
+  name: String(r.name),
+  scopes: JSON.parse(String(r.scopes)) as ApiScope[],
+  secretHash: String(r.secret_hash),
+  createdAt: Number(r.created_at),
+  expiresAt: r.expires_at == null ? null : Number(r.expires_at),
+  lastUsedAt: r.last_used_at == null ? null : Number(r.last_used_at),
+  revokedAt: r.revoked_at == null ? null : Number(r.revoked_at),
+});
 
 export function openDb(file = path.join(process.env.HUB_DATA_DIR ?? "./data", "hub.db")): HubDb {
   if (file !== ":memory:") mkdirSync(path.dirname(file), { recursive: true });
@@ -114,6 +143,49 @@ export function openDb(file = path.join(process.env.HUB_DATA_DIR ?? "./data", "h
     setSetting(key, value) {
       if (value === null) db.prepare("DELETE FROM settings WHERE key = ?").run(key);
       else db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").run(key, value);
+    },
+    tokens() {
+      // Never the hash: only what Settings → API shows.
+      return (db.prepare("SELECT * FROM api_tokens ORDER BY created_at DESC").all() as Record<string, unknown>[]).map((r) => {
+        const { id, name, scopes, createdAt, expiresAt, lastUsedAt, revokedAt } = tokenOf(r);
+        return { id, name, scopes, createdAt, expiresAt, lastUsedAt, revokedAt };
+      });
+    },
+    token(id) {
+      const r = db.prepare("SELECT * FROM api_tokens WHERE id = ?").get(id) as Record<string, unknown> | undefined;
+      return r ? tokenOf(r) : null;
+    },
+    saveToken(t) {
+      db.prepare(
+        `INSERT INTO api_tokens (id, name, scopes, secret_hash, created_at, expires_at, last_used_at, revoked_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(t.id, t.name, JSON.stringify(t.scopes), t.secretHash, t.createdAt, t.expiresAt, t.lastUsedAt, t.revokedAt);
+    },
+    revokeToken(id, at) {
+      return Number(db.prepare("UPDATE api_tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL").run(at, id).changes) > 0;
+    },
+    touchToken(id, at) {
+      db.prepare("UPDATE api_tokens SET last_used_at = ? WHERE id = ?").run(at, id);
+    },
+    audit(e) {
+      db.prepare("INSERT INTO api_audit (at, token_id, token_name, method, path, access, result, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
+        e.at, e.tokenId, e.tokenName, e.method, e.path, e.access, e.result, e.status,
+      );
+    },
+    auditLog(limit) {
+      return (db.prepare("SELECT * FROM api_audit ORDER BY at DESC, rowid DESC LIMIT ?").all(limit) as Record<string, unknown>[]).map((r) => ({
+        at: Number(r.at),
+        tokenId: String(r.token_id),
+        tokenName: String(r.token_name),
+        method: String(r.method),
+        path: String(r.path),
+        access: String(r.access) as AuditEntry["access"],
+        result: String(r.result) as AuditEntry["result"],
+        status: Number(r.status),
+      }));
+    },
+    pruneAudit(before) {
+      db.prepare("DELETE FROM api_audit WHERE at < ?").run(before);
     },
   };
 }

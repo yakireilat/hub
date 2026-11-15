@@ -7,6 +7,9 @@ import {
   sampleWeek,
   serviceInputSchema,
   uniqueServiceId,
+  validateNewToken,
+  type AuditEntry,
+  type TokenView,
   type CheckSample,
   type ManagedService,
   type ServiceInput,
@@ -44,6 +47,16 @@ const fakeFetch = (services: () => ManagedService[]): typeof fetch => async (inp
 export function createDemoClient(): HubClient {
   let services = [...SAMPLE];
   const removed = new Map<string, ManagedService>();
+  // Settings → API: one sample token that Home Assistant uses, with a few calls in the log.
+  const t0 = Date.now();
+  let tokens: TokenView[] = [
+    { id: "4f1c9a20b7e3", name: "Home Assistant", scopes: ["services:read", "today:read"], createdAt: t0 - 12 * 86_400_000, expiresAt: t0 + 78 * 86_400_000, lastUsedAt: t0 - 4 * 60_000, revokedAt: null },
+  ];
+  const audit: AuditEntry[] = [
+    { at: t0 - 4 * 60_000, tokenId: "4f1c9a20b7e3", tokenName: "Home Assistant", method: "GET", path: "/api/v1/services", access: "services:read", result: "allowed", status: 200 },
+    { at: t0 - 9 * 60_000, tokenId: "4f1c9a20b7e3", tokenName: "Home Assistant", method: "POST", path: "/api/v1/services", access: "services:write", result: "missing scope", status: 403 },
+    { at: t0 - 64 * 60_000, tokenId: "4f1c9a20b7e3", tokenName: "Home Assistant", method: "GET", path: "/api/v1/today", access: "today:read", result: "allowed", status: 200 },
+  ];
   const history = new Map<string, CheckSample[]>();
   // A day of pretend history, one check every 10 minutes.
   for (const s of services) {
@@ -170,6 +183,25 @@ export function createDemoClient(): HubClient {
       removed.delete(id);
       services = [...services, s];
       return { ok: true, message: `Restored ${s.name}` };
+    },
+    async tokens() {
+      return { tokens: tokens.map((t) => ({ ...t })), audit: [...audit], apiUrl: "https://hub-api.example.net" };
+    },
+    async createToken(input) {
+      const v = validateNewToken(input);
+      if (!v.ok) return v;
+      const now = Date.now();
+      const id = Math.random().toString(16).slice(2, 14).padEnd(12, "0");
+      const { name, scopes, expiresInDays } = v.value;
+      tokens = [{ id, name, scopes, createdAt: now, expiresAt: expiresInDays === null ? null : now + expiresInDays * 86_400_000, lastUsedAt: null, revokedAt: null }, ...tokens];
+      return { ok: true, message: `Created “${name}”. Copy the token now: it isn't shown again.`, token: `hub_${id}_demo${"x".repeat(28)}` };
+    },
+    async revokeToken(id) {
+      const t = tokens.find((x) => x.id === id);
+      if (!t) return { ok: false, message: "No such token" };
+      if (t.revokedAt) return { ok: false, message: `“${t.name}” was already revoked` };
+      t.revokedAt = Date.now();
+      return { ok: true, message: `Revoked “${t.name}”. Calls with it now get 401.` };
     },
   };
 }

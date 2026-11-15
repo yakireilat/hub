@@ -34,6 +34,8 @@ const navCommands: HubCommand[] = [
   })),
   { id: "services:add", label: "Add a service", keywords: ["monitor", "new", "uptime"], scope: "service", href: "/services?add=1" },
   { id: "services:edit", label: "Edit services", keywords: ["remove", "delete", "monitor"], scope: "service", href: "/services?edit=1" },
+  { id: "tokens:new", label: "Create an API token", keywords: ["api", "key", "settings", "system user"], scope: "action", href: "/settings?new=1" },
+  { id: "tokens:revoke", label: "Revoke an API token", keywords: ["api", "key", "settings", "audit"], scope: "action", href: "/settings#tokens" },
 ];
 
 function matches(cmd: HubCommand, text: string) {

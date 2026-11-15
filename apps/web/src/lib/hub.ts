@@ -112,6 +112,8 @@ function state(): State {
 }
 
 export const getHub = (): Hub => state().hub;
+export const hubDb = (): HubDb => state().db;
+export const apiConfig = () => state().config.api;
 
 const HISTORY_DAYS = Number(process.env.HUB_HISTORY_DAYS) || 7;
 const INTERVAL_S = Number(process.env.HUB_CHECK_INTERVAL_S) || 60;
@@ -125,7 +127,10 @@ export function startScheduler() {
     try {
       if (s.monitor.services().length) await s.monitor.runRound();
       // Prune about once an hour.
-      if (ticks++ % Math.max(1, Math.round(3600 / INTERVAL_S)) === 0) s.db.prune(Date.now() - HISTORY_DAYS * 86_400_000);
+      if (ticks++ % Math.max(1, Math.round(3600 / INTERVAL_S)) === 0) {
+        s.db.prune(Date.now() - HISTORY_DAYS * 86_400_000);
+        s.db.pruneAudit(Date.now() - s.config.api.audit_days * 86_400_000);
+      }
     } catch (e) {
       console.error("check round failed", e);
     }

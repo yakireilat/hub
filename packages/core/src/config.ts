@@ -57,6 +57,15 @@ export const hubConfigSchema = z.object({
   services: z.array(service).default([]),
   actions: z.array(action).default([]),
   inbox_rules: z.array(inboxRule).default([]),
+  /** The API for system users (Settings → API). */
+  api: z
+    .object({
+      /** Where machines call it; nginx there lets through only requests with a hub token. */
+      public_url: z.string().url().default("https://hub-api.mesh.net"),
+      /** How long the audit log keeps calls. */
+      audit_days: z.number().int().min(1).max(3650).default(90),
+    })
+    .prefault({}),
   ui: z
     .object({
       theme: z.enum(["dark", "light", "system"]).default("dark"),
