@@ -7,10 +7,11 @@ cd "$(dirname "$0")"
 new=$1
 prev=$(cat .image 2>/dev/null || true)
 
-mkdir -p data backups
+mkdir -p data backups couchdb/data
 # ponytail: tar of live SQLite files; switch to `sqlite3 .backup` once the worker writes often.
 # ntfy/ is the retired ntfy's data, kept for a rollback; back it up while it is still there.
-tar -czf "backups/data-$(date +%Y%m%d-%H%M%S).tgz" data $([ -d ntfy ] && echo ntfy)
+# couchdb/ is the synced vault (CouchDB only appends, so a live copy is consistent enough to restore).
+tar -czf "backups/data-$(date +%Y%m%d-%H%M%S).tgz" data couchdb $([ -d ntfy ] && echo ntfy)
 ls -1t backups/*.tgz | tail -n +11 | xargs -r rm --
 
 # --remove-orphans: containers this stack no longer defines (the old ntfy) are removed, nothing else.
